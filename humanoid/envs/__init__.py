@@ -35,8 +35,14 @@ from .base.legged_robot import LeggedRobot
 
 from .custom.humanoid_config import XBotLCfg, XBotLCfgPPO
 from .custom.humanoid_env import XBotLFreeEnv
+from .custom.hector_config import HectorCfg, HectorCfgPPO
+from .custom.hector_env import HectorFreeEnv
+from .custom.hector_w_arm_config import HectorFullCfg, HectorFullCfgPPO
+from .custom.hector_w_arm_env import HectorFullFreeEnv
 
 from humanoid.utils.task_registry import task_registry
 
 
 task_registry.register( "humanoid_ppo", XBotLFreeEnv, XBotLCfg(), XBotLCfgPPO() )
+task_registry.register( "hector", HectorFreeEnv, HectorCfg(), HectorCfgPPO() )
+task_registry.register( "hector_full", HectorFullFreeEnv, HectorFullCfg(), HectorFullCfgPPO() )

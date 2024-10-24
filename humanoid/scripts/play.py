@@ -31,6 +31,7 @@
 
 import os
 import cv2
+import copy
 import numpy as np
 from isaacgym import gymapi
 from humanoid import LEGGED_GYM_ROOT_DIR
@@ -43,7 +44,6 @@ from isaacgym.torch_utils import *
 import torch
 from tqdm import tqdm
 from datetime import datetime
-
 
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
@@ -71,21 +71,34 @@ def play(args):
     env.set_camera(env_cfg.viewer.pos, env_cfg.viewer.lookat)
 
     obs = env.get_observations()
-
     # load policy
     train_cfg.runner.resume = True
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
     policy = ppo_runner.get_inference_policy(device=env.device)
-    
+    obs_save_file = os.path.join(LEGGED_GYM_ROOT_DIR, 'observations', 'all_observations.txt')
+    os.makedirs(os.path.dirname(obs_save_file), exist_ok=True)
     # export policy as a jit module (used to run it from C++)
     if EXPORT_POLICY:
         path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'policies')
         export_policy_as_jit(ppo_runner.alg.actor_critic, path)
         print('Exported policy as jit script to: ', path)
 
+        torch.onnx.export(
+        ppo_runner.alg.actor_critic.actor,
+        obs,
+        "locomotion_net.onnx",
+        export_params=True,
+        opset_version=11,
+        do_constant_folding=True,
+        input_names=['obs'],
+        output_names=['action'],
+        dynamic_axes={'input': {0: '615'}, 'output': {0: '10'}})
+
+
+
     logger = Logger(env.dt)
-    robot_index = 0 # which robot is used for logging
-    joint_index = 1 # which joint is used for logging
+    robot_index = -1 # which robot is used for logging
+    joint_index = 9 # which joint is used for logging
     stop_state_log = 1200 # number of steps before plotting states
     if RENDER:
         camera_properties = gymapi.CameraProperties()
@@ -105,7 +118,7 @@ def play(args):
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         video_dir = os.path.join(LEGGED_GYM_ROOT_DIR, 'videos')
         experiment_dir = os.path.join(LEGGED_GYM_ROOT_DIR, 'videos', train_cfg.runner.experiment_name)
-        dir = os.path.join(experiment_dir, datetime.now().strftime('%b%d_%H-%M-%S')+ args.run_name + '.mp4')
+        dir = os.path.join(experiment_dir, datetime.now().strftime('%b%d_%H-%M-%S')+ args.load_run + '.mp4')
         if not os.path.exists(video_dir):
             os.mkdir(video_dir)
         if not os.path.exists(experiment_dir):
@@ -114,7 +127,7 @@ def play(args):
 
     for i in tqdm(range(stop_state_log)):
 
-        actions = policy(obs.detach()) # * 0.
+        actions = policy(obs.detach()) #* 0.
         
         if FIX_COMMAND:
             env.commands[:, 0] = 0.5    # 1.0
@@ -123,7 +136,6 @@ def play(args):
             env.commands[:, 3] = 0.
 
         obs, critic_obs, rews, dones, infos = env.step(actions.detach())
-
         if RENDER:
             env.gym.fetch_results(env.sim, True)
             env.gym.step_graphics(env.sim)
@@ -133,6 +145,8 @@ def play(args):
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
             video.write(img[..., :3])
 
+        # print(env.dof_pos)
+        # print(env.dof_vel[robot_index, joint_index].item())
         logger.log_states(
             {
                 'dof_pos_target': actions[robot_index, joint_index].item() * env.cfg.control.action_scale,
