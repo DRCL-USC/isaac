@@ -75,6 +75,7 @@ def play(args):
     train_cfg.runner.resume = True
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
     policy = ppo_runner.get_inference_policy(device=env.device)
+
     obs_save_file = os.path.join(LEGGED_GYM_ROOT_DIR, 'observations', 'all_observations.txt')
     os.makedirs(os.path.dirname(obs_save_file), exist_ok=True)
     # export policy as a jit module (used to run it from C++)
@@ -125,6 +126,8 @@ def play(args):
             os.mkdir(experiment_dir)
         video = cv2.VideoWriter(dir, fourcc, 50.0, (1920, 1080))
 
+
+
     for i in tqdm(range(stop_state_log)):
 
         actions = policy(obs.detach()) #* 0.
@@ -140,6 +143,11 @@ def play(args):
             env.gym.fetch_results(env.sim, True)
             env.gym.step_graphics(env.sim)
             env.gym.render_all_camera_sensors(env.sim)
+
+            env.gym.draw_viewer(env.viewer, env.sim, True)
+            env.gym.sync_frame_time(env.sim)
+
+
             img = env.gym.get_camera_image(env.sim, env.envs[0], h1, gymapi.IMAGE_COLOR)
             img = np.reshape(img, (1080, 1920, 4))
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
