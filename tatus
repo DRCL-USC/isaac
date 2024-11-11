@@ -1,0 +1,37 @@
+[1mdiff --git a/humanoid/scripts/play.py b/humanoid/scripts/play.py[m
+[1mindex 616e79f..8e7a6a1 100644[m
+[1m--- a/humanoid/scripts/play.py[m
+[1m+++ b/humanoid/scripts/play.py[m
+[36m@@ -75,6 +75,7 @@[m [mdef play(args):[m
+     train_cfg.runner.resume = True[m
+     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)[m
+     policy = ppo_runner.get_inference_policy(device=env.device)[m
+[32m+[m
+     obs_save_file = os.path.join(LEGGED_GYM_ROOT_DIR, 'observations', 'all_observations.txt')[m
+     os.makedirs(os.path.dirname(obs_save_file), exist_ok=True)[m
+     # export policy as a jit module (used to run it from C++)[m
+[36m@@ -125,6 +126,8 @@[m [mdef play(args):[m
+             os.mkdir(experiment_dir)[m
+         video = cv2.VideoWriter(dir, fourcc, 50.0, (1920, 1080))[m
+ [m
+[32m+[m
+[32m+[m
+     for i in tqdm(range(stop_state_log)):[m
+ [m
+         actions = policy(obs.detach()) #* 0.[m
+[36m@@ -140,6 +143,11 @@[m [mdef play(args):[m
+             env.gym.fetch_results(env.sim, True)[m
+             env.gym.step_graphics(env.sim)[m
+             env.gym.render_all_camera_sensors(env.sim)[m
+[32m+[m
+[32m+[m[32m            env.gym.draw_viewer(env.viewer, env.sim, True)[m
+[32m+[m[32m            env.gym.sync_frame_time(env.sim)[m
+[32m+[m
+[32m+[m
+             img = env.gym.get_camera_image(env.sim, env.envs[0], h1, gymapi.IMAGE_COLOR)[m
+             img = np.reshape(img, (1080, 1920, 4))[m
+             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)[m
+[1mdiff --git a/locomotion_net.onnx b/locomotion_net.onnx[m
+[1mnew file mode 100644[m
+[1mindex 0000000..8b848f1[m
+Binary files /dev/null and b/locomotion_net.onnx differ

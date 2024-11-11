@@ -261,7 +261,7 @@ class HectorFreeEnv(LeggedRobot):
             self.critic_history[i][env_ids] *= 0
 
 # ================================================ Rewards ================================================== #
-    def _reward_joint_pos(self):
+    def _reward_joint_pos(self):#no tracking
         """
         Calculates the reward based on the difference between the current joint positions and the target joint positions.
         """
@@ -392,7 +392,7 @@ class HectorFreeEnv(LeggedRobot):
         return rew
 
 
-    def _reward_vel_mismatch_exp(self):
+    def _reward_vel_mismatch_exp(self):#no tracking
         """
         Computes a reward based on the mismatch in the robot's linear and angular velocities. 
         Encourages the robot to maintain a stable velocity by penalizing large deviations.
@@ -404,7 +404,7 @@ class HectorFreeEnv(LeggedRobot):
 
         return c_update
 
-    def _reward_track_vel_hard(self):
+    def _reward_track_vel_hard(self):#no tracking
         """
         Calculates a reward for accurately tracking both linear and angular velocity commands.
         Penalizes deviations from specified linear and angular velocity targets.
@@ -465,7 +465,7 @@ class HectorFreeEnv(LeggedRobot):
         self.feet_height *= ~contact
         return rew_pos
 
-    def _reward_low_speed(self):
+    def _reward_low_speed(self):#no tracking
         """
         Rewards or penalizes the robot based on its speed relative to the commanded speed. 
         This function checks if the robot is moving too slow, too fast, or at the desired speed, 

@@ -40,8 +40,10 @@ class HectorCfg(LeggedRobotCfg):
         fix_base_link = False
 
     class terrain(LeggedRobotCfg.terrain):
-        mesh_type = 'plane'
-        # mesh_type = 'trimesh'
+        # mesh_type = 'plane'
+        # mesh_type = 'curicullum'
+        mesh_type = 'trimesh'
+        # mesh_type = 'heightfield'
         curriculum = False
         # rough terrain only:
         measure_heights = False
@@ -53,7 +55,8 @@ class HectorCfg(LeggedRobotCfg):
         num_cols = 20  # number of terrain cols (types)
         max_init_terrain_level = 10  # starting curriculum state
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
-        terrain_proportions = [0.2, 0.2, 0.4, 0.1, 0.1, 0, 0]
+        # terrain_proportions = [0.2, 0.2, 0.4, 0.1, 0.1, 0, 0]
+        terrain_proportions = [0.1, 0.1, 0.2, 0.1, 0.1, 0.2, 0.2]
         restitution = 0.
 
     class noise:
@@ -69,7 +72,8 @@ class HectorCfg(LeggedRobotCfg):
             height_measurements = 0.1
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.5]
+        # pos = [0.0, 0.0, 0.5]
+        pos = [0.0, 0.0, 0.55]
 
         default_joint_angles = {  # = target angles [rad] when action = 0.0
             'L_hip_joint': 0., # hip yaw
@@ -160,29 +164,29 @@ class HectorCfg(LeggedRobotCfg):
             feet_clearance = 1.5
             feet_contact_number = 2.5
             # gait
-            feet_air_time = 2.0 
+            feet_air_time = 2.0
             foot_slip = -0.05
             feet_distance = 0.2
             knee_distance = 0.2
             # contact
             feet_contact_forces = -0.05
             # vel tracking
-            tracking_lin_vel = 1.8
-            tracking_ang_vel = 1.1
+            tracking_lin_vel = 2.5#1.0
+            tracking_ang_vel = 1.5#1.1
             vel_mismatch_exp = 0.0  # lin_z; ang x,y
-            low_speed = 0.0
+            low_speed =  0.0
             track_vel_hard = 0.0
             # base pos
-            default_joint_pos = 2.2
-            orientation = 1.2
+            default_joint_pos = 1.7#1.2#2.2
+            orientation = 2#1.2
             base_height = 1.0
-            base_acc = 0.5
+            base_acc = 0.3#0.5
             # energy
             action_smoothness = -0.008
             torques = -1e-5
             dof_vel = -1e-4
             dof_acc = -1e-6
-            collision = -1.
+            collision = -0.5#-1.0
 
     class normalization:
         class obs_scales:
