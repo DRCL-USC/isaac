@@ -67,7 +67,7 @@
     <inertial>
       <origin rpy="0 0 0" xyz="-0.007 0.003 -0.019"/>
       <mass value="4.78"/>
-      <inertia ixx="0.0491667" ixy="0.000163" ixz="0.000263" iyy="0.042109" iyz="=0.000161" izz="0.021437"/>
+      <inertia ixx="0.0491667" ixy="0.000163" ixz="0.000263" iyy="0.042109" iyz="0.000161" izz="0.021437"/>
     </inertial>
   </link>
   <joint name="imu_joint" type="fixed">
