@@ -65,9 +65,9 @@
       <material name="white"/>
     </collision>
     <inertial>
-      <origin rpy="0 0 0" xyz="-0.007 0.00316 -0.003"/>
-      <mass value="4.8"/>
-      <inertia ixx="0.051267" ixy="0.000154" ixz="0.000534" iyy="0.021832" iyz="0.0" izz="0.044345"/>
+      <origin rpy="0 0 0" xyz="-0.007 0.003 -0.019"/>
+      <mass value="4.78"/>
+      <inertia ixx="0.0491667" ixy="0.000163" ixz="0.000263" iyy="0.042109" iyz="=0.000161" izz="0.021437"/>
     </inertial>
   </link>
   <joint name="imu_joint" type="fixed">
