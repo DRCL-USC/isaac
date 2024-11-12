@@ -65,9 +65,9 @@
       <material name="white"/>
     </collision>
     <inertial>
-      <origin rpy="0 0 0" xyz="-0.0116 0.00316 -0.0235"/>
-      <mass value="4.98"/>
-      <inertia ixx="0.048637" ixy="0.000154" ixz="0.000534" iyy="0.04267" iyz="0.0" izz="0.023157"/>
+      <origin rpy="0 0 0" xyz="-0.007 0.00316 -0.003"/>
+      <mass value="4.8"/>
+      <inertia ixx="0.051267" ixy="0.000154" ixz="0.000534" iyy="0.021832" iyz="0.0" izz="0.044345"/>
     </inertial>
   </link>
   <joint name="imu_joint" type="fixed">
@@ -140,8 +140,8 @@
     </collision>
     <inertial>
       <origin rpy="0 0 0" xyz="0.025109 -0.002292 -0.024732"/>
-      <mass value="0.224"/>
-      <inertia ixx="2.104e-06" ixy="0.0" ixz="0.0" iyy="5.354e-06" iyz="0.0" izz="7.416e-06"/>
+      <mass value="0.1733"/>
+      <inertia ixx="0.00022" ixy="0.00001" ixz="-0.00006" iyy="0.00023" iyz="0.00001" izz="0.00016"/>
     </inertial>
   </link>
   <!--this link is only for motor mass&colllision-->
@@ -182,9 +182,9 @@
     </collision>
 
     <inertial>
-      <origin rpy="0 0 0" xyz="-0.033217 -0.010231 0"/>
-      <mass value="0.095"/>
-      <inertia ixx="5.1083e-05" ixy="0.0" ixz="0.0" iyy="1.39825e-05" iyz="0.0" izz="9.3473e-05"/>
+      <origin rpy="0 0 0" xyz="-0.03 -0.009 0"/>
+      <mass value="0.072"/>
+      <inertia ixx="0.00004" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.00007"/>
     </inertial>
   </link>
   <!--this link is only for collision-->
@@ -239,8 +239,8 @@
             </collision> -->
     <inertial>
       <origin rpy="0 0 0" xyz="-0.000147 0.01991 -0.081117"/>
-      <mass value="0.642"/>
-      <inertia ixx="0.004437615" ixy="0.0" ixz="0.0" iyy="0.004788512" iyz="0.0" izz="0.000661818"/>
+      <mass value="0.348"/>
+      <inertia ixx="0.00196" ixy="0.0" ixz="0.0" iyy="0.00215" iyz="0.0" izz="0.00032"/>
     </inertial>
   </link>
   <!--this link is only for collision-->
@@ -259,7 +259,7 @@
     <inertial>
       <origin rpy="-1.5707963267948966 0 0" xyz="0 0 0"/>
       <mass value="0.65"/>
-      <inertia ixx="0.00043875" ixy="0.0" ixz="0.0" iyy="0.00043875" iyz="0.0" izz="0.000658125"/>
+      <inertia ixx="0.00043875" ixy="0.0" ixz="0.0" iyy="0.00043875" iyz="0.00002" izz="0.000658125"/>
     </inertial>
   </link>
   <!--this link is only for collision-->
@@ -306,9 +306,9 @@
       </geometry>
     </collision> -->
     <inertial>
-      <origin rpy="0 0 0" xyz="0.0 0.020417 -0.1141"/>
-      <mass value="0.303"/>
-      <inertia ixx="0.001911" ixy="0.0" ixz="0.0" iyy="0.00191038" iyz="0.0" izz="6.8352e-05"/>
+      <origin rpy="0 0 0" xyz="0.00204 0.0 -0.07668"/>
+      <mass value="0.14647"/>
+      <inertia ixx="0.00074" ixy="0.0" ixz="0.0" iyy="0.00075" iyz="0.0" izz="0.00002"/>
     </inertial>
   </link>
   <joint name="L_toe_joint" type="revolute">
@@ -336,8 +336,8 @@
     </collision>
     <inertial>
       <origin rpy="0 0 0" xyz="0.010569 0.017949 -0.017118"/>
-      <mass value="0.214"/>
-      <inertia ixx="5.7298e-05" ixy="0.0" ixz="0.0" iyy="0.000290752" iyz="0.0" izz="0.000249491"/>
+      <mass value="0.085"/>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00012" iyz="0.0" izz="0.00011"/>
     </inertial>
   </link>
   
@@ -372,8 +372,8 @@
             </collision> -->
     <inertial>
       <origin rpy="0 0 0" xyz="0.025109 -0.002292 -0.024732"/>
-      <mass value="0.224"/>
-      <inertia ixx="2.104e-06" ixy="0.0" ixz="0.0" iyy="5.354e-06" iyz="0.0" izz="7.416e-06"/>
+      <mass value="0.1733"/>
+      <inertia ixx="0.00022" ixy="-0.00001" ixz="-0.00006" iyy="0.00023" iyz="0.0" izz="0.00016"/>
     </inertial>
   </link>
   <!--this link is only for motor mass&colllision-->
@@ -425,9 +425,9 @@
                 </geometry>
             </collision> -->
     <inertial>
-      <origin rpy="0 0 0" xyz="-0.033217 -0.010231 0"/>
-      <mass value="0.095"/>
-      <inertia ixx="5.1083e-05" ixy="0.0" ixz="0.0" iyy="1.39825e-05" iyz="0.0" izz="9.3473e-05"/>
+      <origin rpy="0 0 0" xyz="-0.03 -0.00942 0"/>
+      <mass value="0.072"/>
+      <inertia ixx="0.00004" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.00007"/>
     </inertial>
   </link>
   <!--this link is only for collision-->
@@ -481,9 +481,9 @@
                 </geometry>
             </collision> -->
     <inertial>
-      <origin rpy="0 0 0" xyz="-0.000147 -0.01991 -0.081117"/>
-      <mass value="0.642"/>
-      <inertia ixx="0.004437615" ixy="0.0" ixz="0.0" iyy="0.004788512" iyz="0.0" izz="0.000661818"/>
+      <origin rpy="0 0 0" xyz="0.000 -0.020891 -0.07506"/>
+      <mass value="0.34806"/>
+      <inertia ixx="0.00196" ixy="0.0" ixz="0.0" iyy="0.00215" iyz="0.0" izz="0.00032"/>
     </inertial>
   </link>
   <!--this link is only for collision-->
@@ -550,9 +550,9 @@
       </geometry>
     </collision> -->
     <inertial>
-      <origin rpy="0 0 0" xyz="0.0 -0.020417 -0.1141"/>
-      <mass value="0.303"/>
-      <inertia ixx="0.001911" ixy="0.0" ixz="0.0" iyy="0.00191038" iyz="0.0" izz="6.8352e-05"/>
+      <origin rpy="0 0 0" xyz="0.00204 0.0 -0.07668"/>
+      <mass value="0.14647"/>
+      <inertia ixx="0.00074" ixy="0.0" ixz="0.0" iyy="0.00075" iyz="0.0" izz="0.00002"/>
     </inertial>
   </link>
   <joint name="R_toe_joint" type="revolute">
@@ -586,8 +586,8 @@
     </collision>
     <inertial>
       <origin rpy="0 0 0" xyz="0.010569 -0.017949 -0.017118"/>
-      <mass value="0.214"/>
-      <inertia ixx="5.7298e-05" ixy="0.0" ixz="0.0" iyy="0.000290752" iyz="0.0" izz="0.000249491"/>
+      <mass value="0.08592"/>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00012" iyz="0.0" izz="0.00011"/>
     </inertial>
   </link>
  
