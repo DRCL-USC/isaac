@@ -9,9 +9,9 @@ class HectorCfg(LeggedRobotCfg):
         # change the observation dim
         frame_stack = 15
         c_frame_stack = 15
-        num_single_obs = 41
+        num_single_obs = 39
         num_observations = int(frame_stack * num_single_obs)
-        single_num_privileged_obs = 70 
+        single_num_privileged_obs = 66 
         # + 187
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
         num_actions = 10
@@ -22,7 +22,7 @@ class HectorCfg(LeggedRobotCfg):
     class safety:
         # safety factors
         pos_limit = 0.8
-        vel_limit = 0.5
+        vel_limit = 0.7
         torque_limit = 0.85
 
     class asset(LeggedRobotCfg.asset):
@@ -32,7 +32,7 @@ class HectorCfg(LeggedRobotCfg):
         foot_name = "toe"
         knee_name = "calf"
 
-        terminate_after_contacts_on = ['base', 'thigh']
+        terminate_after_contacts_on = ['base', 'thigh', 'hip']
         penalize_contacts_on = ["base", "thigh"]
         self_collisions = 1  # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
@@ -40,10 +40,8 @@ class HectorCfg(LeggedRobotCfg):
         fix_base_link = False
 
     class terrain(LeggedRobotCfg.terrain):
-        # mesh_type = 'plane'
-        # mesh_type = 'curicullum'
-        mesh_type = 'trimesh'
-        # mesh_type = 'heightfield'
+        mesh_type = 'plane'
+        # mesh_type = 'trimesh'
         curriculum = False
         # rough terrain only:
         measure_heights = False
@@ -55,29 +53,27 @@ class HectorCfg(LeggedRobotCfg):
         num_cols = 20  # number of terrain cols (types)
         max_init_terrain_level = 10  # starting curriculum state
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
-        # terrain_proportions = [0.2, 0.2, 0.4, 0.1, 0.1, 0, 0]
-        terrain_proportions = [0.1, 0.1, 0.2, 0.1, 0.1, 0.2, 0.2]
+        terrain_proportions = [0.2, 0.2, 0.4, 0.1, 0.1, 0, 0]
         restitution = 0.
 
     class noise:
         add_noise = True
-        noise_level = 0.6    # scales other values
+        noise_level = 1.0    # scales other values
 
         class noise_scales:
             dof_pos = 0.05
-            dof_vel = 0.5
+            dof_vel = 1.5
             ang_vel = 0.1
             lin_vel = 0.05
             quat = 0.03
             height_measurements = 0.1
 
     class init_state(LeggedRobotCfg.init_state):
-        # pos = [0.0, 0.0, 0.5]
         pos = [0.0, 0.0, 0.55]
 
         default_joint_angles = {  # = target angles [rad] when action = 0.0
             'L_hip_joint': 0., # hip yaw
-            'L_hip_roll_joint': 0.0,  # hip roll
+            'L_hip_roll_joint': 0.,  # hip roll
             'L_thigh_joint': 0.785, # hip pitch/thigh
             'L_calf_joint': -1.578,
             'L_toe_joint': 0.785,
@@ -90,15 +86,15 @@ class HectorCfg(LeggedRobotCfg):
 
     class control(LeggedRobotCfg.control):
         # PD Drive parameters:
-        stiffness = {'hip_joint': 40.0, 'hip_roll': 40.0, 'thigh': 60.0,
-                     'calf': 120.0, 'toe': 20.0}
-        damping = {'hip_joint': 3.0, 'hip_roll': 3.0, 'thigh': 5.0,
-                   'calf': 4.0, 'toe': 1.0}
+        stiffness = {'hip_joint': 50.0, 'hip_roll': 50.0, 'thigh': 80.0,
+                     'calf': 80.0, 'toe': 3.0}
+        damping = {'hip_joint': 2.0, 'hip_roll': 2.0, 'thigh': 2.0,
+                   'calf': 2.0, 'toe': 1.0}
 
         # action scale: target angle = actionScale * action + defaultAngle
         action_scale = 0.25
         # decimation: Number of control action updates @ sim DT per policy DT
-        decimation = 10  # 100hz
+        decimation = 20  # 50hz
 
     class sim(LeggedRobotCfg.sim):
         dt = 0.001  # 1000 Hz
@@ -112,25 +108,26 @@ class HectorCfg(LeggedRobotCfg):
             num_velocity_iterations = 0
             contact_offset = 0.01  # [m]
             rest_offset = 0.0   # [m]
-            bounce_threshold_velocity = 0.1  # [m/s]
+            bounce_threshold_velocity = 0.5  # [m/s]
             max_depenetration_velocity = 1.0
-            max_gpu_contact_pairs = 2**23  # 2**24 -> needed for 8000 envs and more
+            max_gpu_contact_pairs = 2**25  # 2**24 -> needed for 8000 envs and more
             default_buffer_size_multiplier = 5
             # 0: never, 1: last sub-step, 2: all sub-steps (default=2)
             contact_collection = 2
 
     class domain_rand:
         randomize_friction = True
-        friction_range = [0.1, 1]
+        friction_range = [0.05, 0.3]
         randomize_base_mass = True
         added_mass_range = [-2., 4.]
         push_robots = True
         push_interval_s = 4
-        max_push_vel_xy = 0.3
-        max_push_ang_vel = 0.4
+        max_push_vel_xy = 0.4
+        max_push_ang_vel = 0.6
         # dynamic randomization
         action_delay = 0.0
-        action_noise = 0.02
+        action_noise = 0.08
+        motor_strength = [0.8, 1.1]
 
     class commands(LeggedRobotCfg.commands):
         # Vers: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
@@ -141,7 +138,7 @@ class HectorCfg(LeggedRobotCfg):
         class ranges:
             lin_vel_x = [-0.6, 0.6]   # min max [m/s]
             lin_vel_y = [-0.3, 0.3]   # min max [m/s]
-            ang_vel_yaw = [-0.3, 0.3] # min max [rad/s]
+            ang_vel_yaw = [-0.5, 0.5] # min max [rad/s]
             heading = [-3.14, 3.14]
 
     class rewards:
@@ -153,40 +150,31 @@ class HectorCfg(LeggedRobotCfg):
         target_feet_height = 0.06        # m
         cycle_time = 0.64                # sec
         # if true negative total rewards are clipped at zero (avoids early termination problems)
-        only_positive_rewards = True
+        only_positive_rewards = False
         # tracking reward = exp(error*sigma)
-        tracking_sigma = 5
+        tracking_sigma = 0.25
         max_contact_force = 180  # Forces above this value are penalized
 
         class scales:
-            # reference motion tracking
-            joint_pos = 0.0
-            feet_clearance = 1.5
-            feet_contact_number = 2.5
-            # gait
-            feet_air_time = 2.0
-            foot_slip = -0.05
-            feet_distance = 0.2
-            knee_distance = 0.2
-            # contact
-            feet_contact_forces = -0.05
-            # vel tracking
-            tracking_lin_vel = 2.5#1.0
-            tracking_ang_vel = 1.5#1.1
-            vel_mismatch_exp = 0.0  # lin_z; ang x,y
-            low_speed =  0.0
-            track_vel_hard = 0.0
-            # base pos
-            default_joint_pos = 1.7#1.2#2.2
-            orientation = 2#1.2
-            base_height = 1.0
-            base_acc = 0.3#0.5
-            # energy
-            action_smoothness = -0.008
-            torques = -1e-5
-            dof_vel = -1e-4
-            dof_acc = -1e-6
-            collision = -0.5#-1.0
+            termination = -200.
+            default_joint_pos = 1.6
+            foot_slip = -0.
+            feet_clearance = 0.0
+            tracking_lin_vel = 1.5
+            tracking_ang_vel = 0.8
+            ang_vel_xy = -0.8
+            torques = -8.e-6
+            dof_acc = -5.e-7
+            lin_vel_z = -1.5
+            feet_air_time = 30.
+            orientation = -1.0
+            dof_pos_limits = -1.
+            base_height = -10.0
+            no_fly = 0.0
+            dof_vel = -2.e-4
+            feet_contact_forces = -0.01
+
+            action_rate = -0.1
 
     class normalization:
         class obs_scales:
@@ -206,16 +194,19 @@ class HectorCfgPPO(LeggedRobotCfgPPO):
 
     class policy:
         init_noise_std = 1.0
-        actor_hidden_dims = [512, 256, 128]
-        critic_hidden_dims = [768, 256, 128]
+        actor_hidden_dims = [768, 768, 768]
+        critic_hidden_dims = [768, 768, 768]
 
     class algorithm(LeggedRobotCfgPPO.algorithm):
-        entropy_coef = 0.001
-        learning_rate = 1e-5
-        num_learning_epochs = 2
-        gamma = 0.994
-        lam = 0.9
+        entropy_coef = 0.01
+        learning_rate = 1e-3
+        num_learning_epochs = 5
+        gamma = 0.99
+        lam = 0.95
         num_mini_batches = 4
+        schedule = 'adaptive'
+        desired_kl = 0.01
+        max_grad_norm = 1.
 
     class runner:
         policy_class_name = 'ActorCritic'

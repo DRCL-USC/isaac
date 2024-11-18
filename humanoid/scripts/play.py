@@ -48,18 +48,17 @@ from datetime import datetime
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
-    # env_cfg.env.num_envs = min(env_cfg.env.num_envs, 1)
-    env_cfg.env.num_envs = 8
-    env_cfg.sim.max_gpu_contact_pairs = 2**10
-    # env_cfg.terrain.mesh_type = 'heightfield'
-    env_cfg.terrain.mesh_type = 'trimesh'
-    # env_cfg.terrain.mesh_type = 'plane'
+    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 1)
+    env_cfg.sim.max_gpu_contact_pairs = 2**25
+    # env_cfg.terrain.mesh_type = 'trimesh'
+    # env_cfg.terrain.terrain_proportions = [0.1, 0.1, 0.4, 0.1, 0.1, 0.1, 0.1]
+    env_cfg.terrain.mesh_type = 'plane'
     env_cfg.terrain.num_rows = 5
     env_cfg.terrain.num_cols = 5
-    env_cfg.terrain.curriculum = False
+    env_cfg.terrain.curriculum = False     
     env_cfg.terrain.max_init_terrain_level = 5
     env_cfg.noise.add_noise = True
-    env_cfg.domain_rand.push_robots = False
+    env_cfg.domain_rand.push_robots = False 
     env_cfg.domain_rand.joint_angle_noise = 0.
     env_cfg.noise.curriculum = False
     env_cfg.noise.noise_level = 0.5
@@ -77,7 +76,6 @@ def play(args):
     train_cfg.runner.resume = True
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
     policy = ppo_runner.get_inference_policy(device=env.device)
-
     obs_save_file = os.path.join(LEGGED_GYM_ROOT_DIR, 'observations', 'all_observations.txt')
     os.makedirs(os.path.dirname(obs_save_file), exist_ok=True)
     # export policy as a jit module (used to run it from C++)
@@ -95,7 +93,7 @@ def play(args):
         do_constant_folding=True,
         input_names=['obs'],
         output_names=['action'],
-        dynamic_axes={'input': {0: '615'}, 'output': {0: '10'}})
+        dynamic_axes={'input': {0: '585'}, 'output': {0: '10'}})
 
 
 
@@ -128,17 +126,28 @@ def play(args):
             os.mkdir(experiment_dir)
         video = cv2.VideoWriter(dir, fourcc, 50.0, (1920, 1080))
 
-
-
     for i in tqdm(range(stop_state_log)):
 
         actions = policy(obs.detach()) #* 0.
-
+        
         if FIX_COMMAND:
-            env.commands[:, 0] = 0.5    # 1.0
+            env.commands[:, 0] = -0.  # 1.0
             env.commands[:, 1] = 0.
             env.commands[:, 2] = 0.
             env.commands[:, 3] = 0.
+        
+        # if i > 200:
+            # env.commands[:, 0] = 0.5
+
+        # if i > 400:
+        #     env.commands[:, 0] = 0.
+        #     # env.commands[:, 1] = 0.3
+
+
+        if i > 800:
+            env.commands[:, 2] = 0.
+            # env.commands[:, 2] = 0.5
+        # print(env.contact_forces[robot_index, env.feet_indices, 2])
 
         obs, critic_obs, rews, dones, infos = env.step(actions.detach())
         if RENDER:
@@ -149,13 +158,12 @@ def play(args):
             env.gym.draw_viewer(env.viewer, env.sim, True)
             env.gym.sync_frame_time(env.sim)
 
-
             img = env.gym.get_camera_image(env.sim, env.envs[0], h1, gymapi.IMAGE_COLOR)
             img = np.reshape(img, (1080, 1920, 4))
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
             video.write(img[..., :3])
 
-        # print(env.dof_pos)
+        # print(env.dof_pos[robot_index, joint_index].item())
         # print(env.dof_vel[robot_index, joint_index].item())
         logger.log_states(
             {
@@ -181,13 +189,13 @@ def play(args):
 
     logger.print_rewards()
     logger.plot_states()
-
+    
     if RENDER:
         video.release()
 
 if __name__ == '__main__':
     EXPORT_POLICY = True
     RENDER = True
-    FIX_COMMAND = True
+    FIX_COMMAND = False
     args = get_args()
     play(args)

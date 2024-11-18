@@ -80,6 +80,7 @@ class LeggedRobot(BaseTask):
         self._init_buffers()
         self._prepare_reward_function()
         self.init_done = True
+        self.motor_strength = 1
 
     def step(self, actions):
         """ Apply actions, simulate, call self.post_physics_step()
@@ -110,6 +111,8 @@ class LeggedRobot(BaseTask):
 
     def reset(self):
         """ Reset all robots"""
+        strength_range = self.cfg.domain_rand.motor_strength
+        self.motor_strength = strength_range[0] + np.random.random()*(strength_range[1] - strength_range[0])
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
         obs, privileged_obs, _, _, _ = self.step(torch.zeros(
             self.num_envs, self.num_actions, device=self.device, requires_grad=False))
@@ -146,6 +149,7 @@ class LeggedRobot(BaseTask):
         self.last_last_actions[:] = torch.clone(self.last_actions[:])
         self.last_actions[:] = self.actions[:]
         self.last_dof_vel[:] = self.dof_vel[:]
+        self.last_dof_pos[:] = self.dof_pos[:]
         self.last_root_vel[:] = self.root_states[:, 7:13]
         self.last_rigid_state[:] = self.rigid_state[:]
 
@@ -191,6 +195,7 @@ class LeggedRobot(BaseTask):
         self.last_actions[env_ids] = 0.
         self.last_rigid_state[env_ids] = 0.
         self.last_dof_vel[env_ids] = 0.
+        self.last_dof_pos[env_ids] = 0.
         self.feet_air_time[env_ids] = 0.
         self.episode_length_buf[env_ids] = 0
         self.reset_buf[env_ids] = 1
@@ -352,6 +357,8 @@ class LeggedRobot(BaseTask):
         p_gains = self.p_gains
         d_gains = self.d_gains
         torques = p_gains * (actions_scaled + self.default_dof_pos - self.dof_pos) - d_gains * self.dof_vel
+
+        # torques *= self.motor_strength
         return torch.clip(torques, -self.torque_limits, self.torque_limits)
 
     
@@ -469,6 +476,7 @@ class LeggedRobot(BaseTask):
         self.last_last_actions = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.last_rigid_state = torch.zeros_like(self.rigid_state)
         self.last_dof_vel = torch.zeros_like(self.dof_vel)
+        self.last_dof_pos = torch.zeros_like(self.dof_pos)
         self.last_root_vel = torch.zeros_like(self.root_states[:, 7:13])
         self.commands = torch.zeros(self.num_envs, self.cfg.commands.num_commands, dtype=torch.float, device=self.device, requires_grad=False) # x vel, y vel, yaw vel, heading
         self.commands_scale = torch.tensor([self.obs_scales.lin_vel, self.obs_scales.lin_vel, self.obs_scales.ang_vel], device=self.device, requires_grad=False,) # TODO change this

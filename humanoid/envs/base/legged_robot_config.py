@@ -127,6 +127,7 @@ class LeggedRobotCfg(BaseConfig):
         push_robots = True
         push_interval_s = 15
         max_push_vel_xy = 1.
+        motor_strength = [0.8, 1.0]
 
 
     class rewards:
