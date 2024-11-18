@@ -56,7 +56,8 @@ class HectorCfg(LeggedRobotCfg):
         max_init_terrain_level = 10  # starting curriculum state
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
         # terrain_proportions = [0.2, 0.2, 0.4, 0.1, 0.1, 0, 0]
-        terrain_proportions = [0.1, 0.1, 0.2, 0.1, 0.1, 0.2, 0.2]
+        # terrain_proportions = [0.1, 0.1, 0.2, 0.1, 0.1, 0.2, 0.2]
+        terrain_proportions = [0, 0, 0, 0, 0, 0.5, 0.5]
         restitution = 0.
 
     class noise:

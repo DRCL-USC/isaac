@@ -214,21 +214,29 @@ class HumanoidTerrain(Terrain):
         h_slope = difficulty * 0.45
         if choice < self.proportions[0]:
             pass
-        elif choice < self.proportions[1]:
-            num_rectangles = 20
-            rectangle_min_size = 1.
-            rectangle_max_size = 2.
-            terrain_utils.discrete_obstacles_terrain(terrain, discrete_obstacles_height, rectangle_min_size, rectangle_max_size, num_rectangles, platform_size=3.)
-        elif choice < self.proportions[2]:
-            terrain_utils.random_uniform_terrain(terrain, min_height=-r_height, max_height=r_height, step=0.005, downsampled_scale=0.2)
-        elif choice < self.proportions[3]:
-            terrain_utils.pyramid_sloped_terrain(terrain, slope=h_slope, platform_size=0.1)
-        elif choice < self.proportions[4]:
-            terrain_utils.pyramid_sloped_terrain(terrain, slope=-h_slope, platform_size=0.1)
         elif choice < self.proportions[5]:
             terrain_utils.pyramid_stairs_terrain(terrain, step_width=0.4, step_height=discrete_obstacles_height, platform_size=1.)
-        elif choice < self.proportions[6]:
+        elif choice >= self.proportions[5] and choice < self.proportions[6]:
             terrain_utils.pyramid_stairs_terrain(terrain, step_width=0.4, step_height=-discrete_obstacles_height, platform_size=1.)
         else:
             pass
+        # if choice < self.proportions[0]:
+        #     pass
+        # elif choice < self.proportions[1]:
+        #     num_rectangles = 20
+        #     rectangle_min_size = 1.
+        #     rectangle_max_size = 2.
+        #     terrain_utils.discrete_obstacles_terrain(terrain, discrete_obstacles_height, rectangle_min_size, rectangle_max_size, num_rectangles, platform_size=3.)
+        # elif choice < self.proportions[2]:
+        #     terrain_utils.random_uniform_terrain(terrain, min_height=-r_height, max_height=r_height, step=0.005, downsampled_scale=0.2)
+        # elif choice < self.proportions[3]:
+        #     terrain_utils.pyramid_sloped_terrain(terrain, slope=h_slope, platform_size=0.1)
+        # elif choice < self.proportions[4]:
+        #     terrain_utils.pyramid_sloped_terrain(terrain, slope=-h_slope, platform_size=0.1)
+        # elif choice < self.proportions[5]:
+        #     terrain_utils.pyramid_stairs_terrain(terrain, step_width=0.4, step_height=discrete_obstacles_height, platform_size=1.)
+        # elif choice < self.proportions[6]:
+        #     terrain_utils.pyramid_stairs_terrain(terrain, step_width=0.4, step_height=-discrete_obstacles_height, platform_size=1.)
+        # else:
+        #     pass
         return terrain

@@ -168,6 +168,10 @@ class HectorFreeEnv(LeggedRobot):
         actions += self.cfg.domain_rand.action_noise * torch.randn_like(actions) * actions 
         return super().step(actions)
 
+    def get_observations(self):
+        base_vel = self.base_lin_vel * self.obs_scales.lin_vel
+        base_pos = self.root_states[:, :3]
+        return self.obs_buf, base_vel, base_pos
 
     def compute_observations(self):
 
@@ -259,6 +263,7 @@ class HectorFreeEnv(LeggedRobot):
             self.obs_history[i][env_ids] *= 0
         for i in range(self.critic_history.maxlen):
             self.critic_history[i][env_ids] *= 0
+
 
 # ================================================ Rewards ================================================== #
     def _reward_joint_pos(self):#no tracking

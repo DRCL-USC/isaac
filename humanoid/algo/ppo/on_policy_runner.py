@@ -104,7 +104,7 @@ class OnPolicyRunner:
             self.env.episode_length_buf = torch.randint_like(
                 self.env.episode_length_buf, high=int(self.env.max_episode_length)
             )
-        obs = self.env.get_observations()
+        obs, base_vel, base_pos = self.env.get_observations()
         privileged_obs = self.env.get_privileged_observations()
         critic_obs = privileged_obs if privileged_obs is not None else obs
         obs, critic_obs = obs.to(self.device), critic_obs.to(self.device)
@@ -126,7 +126,7 @@ class OnPolicyRunner:
             # Rollout
             with torch.inference_mode():
                 for i in range(self.num_steps_per_env):
-                    actions = self.alg.act(obs, critic_obs)
+                    actions = self.alg.act(obs, critic_obs, base_vel, base_pos)
                     obs, privileged_obs, rewards, dones, infos = self.env.step(actions)
                     critic_obs = privileged_obs if privileged_obs is not None else obs
                     obs, critic_obs, rewards, dones = (
@@ -135,7 +135,7 @@ class OnPolicyRunner:
                         rewards.to(self.device),
                         dones.to(self.device),
                     )
-                    self.alg.process_env_step(rewards, dones, infos)
+                    self.alg.process_env_step(rewards, dones, infos, next_obs=obs)
 
                     if self.log_dir is not None:
                         # Book keeping

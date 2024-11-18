@@ -32,6 +32,7 @@
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
+from .CENet import CENet
 
 class ActorCritic(nn.Module):
     def __init__(self,  num_actor_obs,
@@ -49,29 +50,33 @@ class ActorCritic(nn.Module):
 
         mlp_input_dim_a = num_actor_obs
         mlp_input_dim_c = num_critic_obs
+        #CENet
+        CENet_input_dim = mlp_input_dim_a-41
+        self.CEnet = CENet(CENet_input_dim)
         # Policy
-        actor_layers = []
-        actor_layers.append(nn.Linear(mlp_input_dim_a, actor_hidden_dims[0]))
-        actor_layers.append(activation)
-        for l in range(len(actor_hidden_dims)):
-            if l == len(actor_hidden_dims) - 1:
-                actor_layers.append(nn.Linear(actor_hidden_dims[l], num_actions))
-            else:
-                actor_layers.append(nn.Linear(actor_hidden_dims[l], actor_hidden_dims[l + 1]))
-                actor_layers.append(activation)
-        self.actor = nn.Sequential(*actor_layers)
-
+        # actor_layers = []
+        # actor_layers.append(nn.Linear(mlp_input_dim_a, actor_hidden_dims[0]))
+        # actor_layers.append(activation)
+        # for l in range(len(actor_hidden_dims)):
+        #     if l == len(actor_hidden_dims) - 1:
+        #         actor_layers.append(nn.Linear(actor_hidden_dims[l], num_actions))
+        #     else:
+        #         actor_layers.append(nn.Linear(actor_hidden_dims[l], actor_hidden_dims[l + 1]))
+        #         actor_layers.append(activation)
+        # self.actor = nn.Sequential(*actor_layers)
+        self.actor = Actor(mlp_input_dim_a, actor_hidden_dims, num_actions, activation, self.CEnet, CENet_input_dim)
         # Value function
-        critic_layers = []
-        critic_layers.append(nn.Linear(mlp_input_dim_c, critic_hidden_dims[0]))
-        critic_layers.append(activation)
-        for l in range(len(critic_hidden_dims)):
-            if l == len(critic_hidden_dims) - 1:
-                critic_layers.append(nn.Linear(critic_hidden_dims[l], 1))
-            else:
-                critic_layers.append(nn.Linear(critic_hidden_dims[l], critic_hidden_dims[l + 1]))
-                critic_layers.append(activation)
-        self.critic = nn.Sequential(*critic_layers)
+        # critic_layers = []
+        # critic_layers.append(nn.Linear(mlp_input_dim_c, critic_hidden_dims[0]))
+        # critic_layers.append(activation)
+        # for l in range(len(critic_hidden_dims)):
+        #     if l == len(critic_hidden_dims) - 1:
+        #         critic_layers.append(nn.Linear(critic_hidden_dims[l], 1))
+        #     else:
+        #         critic_layers.append(nn.Linear(critic_hidden_dims[l], critic_hidden_dims[l + 1]))
+        #         critic_layers.append(activation)
+        # self.critic = nn.Sequential(*critic_layers)
+        self.critic = Critic(mlp_input_dim_c, critic_hidden_dims, activation)
 
         print(f"Actor MLP: {self.actor}")
         print(f"Critic MLP: {self.critic}")
@@ -126,3 +131,49 @@ class ActorCritic(nn.Module):
     def evaluate(self, critic_observations, **kwargs):
         value = self.critic(critic_observations)
         return value
+
+
+class Actor(nn.Module):
+    def __init__(self, mlp_input_dim_a, actor_hidden_dims, num_actions, activation, CENet, CENet_input_dim):
+        super(Actor, self).__init__()
+        actor_layers = []
+        actor_layers.append(nn.Linear(22+41, actor_hidden_dims[0])) # the length of input dim is body velocity+position+latent state+current observation
+        actor_layers.append(activation)
+        for l in range(len(actor_hidden_dims)):
+            if l == len(actor_hidden_dims) - 1:
+                actor_layers.append(nn.Linear(actor_hidden_dims[l], num_actions))
+            else:
+                actor_layers.append(nn.Linear(actor_hidden_dims[l], actor_hidden_dims[l + 1]))
+                actor_layers.append(activation)
+        self.actor = nn.Sequential(*actor_layers)
+        self.CENet = CENet
+        self.CENet_input_dim = CENet_input_dim
+
+    def forward(self, x):
+        temporal_partial_observations = x[:, :self.CENet_input_dim]#574
+        current_observations = x[:, self.CENet_input_dim:]
+        estimation, latent_params = self.CENet.encode(temporal_partial_observations)
+        v, p, z = estimation
+        # latent_mu, latent_var, vel_mu, vel_var = latent_params
+        actor_input = torch.cat((v, p, z, current_observations), dim=1)
+        return self.actor(actor_input)
+
+
+class Critic(nn.Module):
+    def __init__(self, mlp_input_dim_c, critic_hidden_dims, activation):
+        super(Critic, self).__init__()
+
+        critic_layers = []
+        critic_layers.append(nn.Linear(mlp_input_dim_c, critic_hidden_dims[0]))
+        critic_layers.append(activation)
+        for l in range(len(critic_hidden_dims)):
+            if l == len(critic_hidden_dims) - 1:
+                critic_layers.append(nn.Linear(critic_hidden_dims[l], 1))
+            else:
+                critic_layers.append(nn.Linear(critic_hidden_dims[l], critic_hidden_dims[l + 1]))
+                critic_layers.append(activation)
+        self.critic = nn.Sequential(*critic_layers)
+
+
+    def forward(self, x):
+        return self.critic(x)
