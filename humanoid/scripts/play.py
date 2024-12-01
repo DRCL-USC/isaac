@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-FileCopyrightText: Copyright (c) 2021 ETH Zurich, Nikita Rudin
 # SPDX-License-Identifier: BSD-3-Clause
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #
@@ -28,6 +28,11 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # Copyright (c) 2024 Beijing RobotEra TECHNOLOGY CO.,LTD. All rights reserved.
+import sys
+import os
+
+# Add the current directory to sys.path
+sys.path.append(os.getcwd())
 
 import os
 import cv2
@@ -55,10 +60,10 @@ def play(args):
     env_cfg.terrain.mesh_type = 'plane'
     env_cfg.terrain.num_rows = 5
     env_cfg.terrain.num_cols = 5
-    env_cfg.terrain.curriculum = False     
+    env_cfg.terrain.curriculum = False
     env_cfg.terrain.max_init_terrain_level = 5
     env_cfg.noise.add_noise = True
-    env_cfg.domain_rand.push_robots = False 
+    env_cfg.domain_rand.push_robots = False
     env_cfg.domain_rand.joint_angle_noise = 0.
     env_cfg.noise.curriculum = False
     env_cfg.noise.noise_level = 0.5
@@ -129,13 +134,13 @@ def play(args):
     for i in tqdm(range(stop_state_log)):
 
         actions = policy(obs.detach()) #* 0.
-        
+
         if FIX_COMMAND:
             env.commands[:, 0] = -0.  # 1.0
             env.commands[:, 1] = 0.
             env.commands[:, 2] = 0.
             env.commands[:, 3] = 0.
-        
+
         # if i > 200:
             # env.commands[:, 0] = 0.5
 
@@ -189,7 +194,7 @@ def play(args):
 
     logger.print_rewards()
     logger.plot_states()
-    
+
     if RENDER:
         video.release()
 
