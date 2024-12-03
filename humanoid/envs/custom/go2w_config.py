@@ -9,12 +9,12 @@ class Go2wCfg(LeggedRobotCfg):
         # change the observation dim
         frame_stack = 15
         c_frame_stack = 15
-        num_single_obs = 39
+        num_single_obs = 57
         num_observations = int(frame_stack * num_single_obs)
-        single_num_privileged_obs = 66
+        single_num_privileged_obs = 98
         # + 187
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
-        num_actions = 10
+        num_actions = 16
         num_envs = 4096
         episode_length_s = 24     # episode length in seconds
         use_ref_actions = False   # speed up training by using reference actions
@@ -88,6 +88,11 @@ class Go2wCfg(LeggedRobotCfg):
             'RL_calf_joint': -1.5,
             'FR_calf_joint': -1.5,
             'RR_calf_joint': -1.5,
+
+            'FL_foot_joint': 0,
+            'RL_foot_joint': 0,
+            'FR_foot_joint': 0,
+            'RR_foot_joint': 0,
         }
 
     class control(LeggedRobotCfg.control):
