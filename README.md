@@ -46,6 +46,7 @@ python scripts/sim2sim.py --load_model /path/to/logs/XBot_ppo/exported/policies/
 
 
 #### 4. Parameters
+- **Task**: To run for different robots, set `--task` to desired one. Available options are: humanoid_ppo, hector, go2w
 - **CPU and GPU Usage**: To run simulations on the CPU, set both `--sim_device=cpu` and `--rl_device=cpu`. For GPU operations, specify `--sim_device=cuda:{0,1,2...}` and `--rl_device={0,1,2...}` accordingly. Please note that `CUDA_VISIBLE_DEVICES` is not applicable, and it's essential to match the `--sim_device` and `--rl_device` settings.
 - **Headless Operation**: Include `--headless` for operations without rendering.
 - **Rendering Control**: Press 'v' to toggle rendering during training.
