@@ -128,7 +128,7 @@ def play(args):
 
     for i in tqdm(range(stop_state_log)):
 
-        actions = policy(obs.detach()) #* 0.
+        actions = policy(obs.detach()) * 0.
         
         if FIX_COMMAND:
             env.commands[:, 0] = -0.  # 1.0
@@ -165,27 +165,27 @@ def play(args):
 
         # print(env.dof_pos[robot_index, joint_index].item())
         # print(env.dof_vel[robot_index, joint_index].item())
-        logger.log_states(
-            {
-                'dof_pos_target': actions[robot_index, joint_index].item() * env.cfg.control.action_scale,
-                'dof_pos': env.dof_pos[robot_index, joint_index].item(),
-                'dof_vel': env.dof_vel[robot_index, joint_index].item(),
-                'dof_torque': env.torques[robot_index, joint_index].item(),
-                'command_x': env.commands[robot_index, 0].item(),
-                'command_y': env.commands[robot_index, 1].item(),
-                'command_yaw': env.commands[robot_index, 2].item(),
-                'base_vel_x': env.base_lin_vel[robot_index, 0].item(),
-                'base_vel_y': env.base_lin_vel[robot_index, 1].item(),
-                'base_vel_z': env.base_lin_vel[robot_index, 2].item(),
-                'base_vel_yaw': env.base_ang_vel[robot_index, 2].item(),
-                'contact_forces_z': env.contact_forces[robot_index, env.feet_indices, 2].cpu().numpy()
-            }
-            )
+        # logger.log_states(
+        #     {
+        #         'dof_pos_target': actions[robot_index, joint_index].item() * env.cfg.control.action_scale,
+        #         'dof_pos': env.dof_pos[robot_index, joint_index].item(),
+        #         'dof_vel': env.dof_vel[robot_index, joint_index].item(),
+        #         'dof_torque': env.torques[robot_index, joint_index].item(),
+        #         'command_x': env.commands[robot_index, 0].item(),
+        #         'command_y': env.commands[robot_index, 1].item(),
+        #         'command_yaw': env.commands[robot_index, 2].item(),
+        #         'base_vel_x': env.base_lin_vel[robot_index, 0].item(),
+        #         'base_vel_y': env.base_lin_vel[robot_index, 1].item(),
+        #         'base_vel_z': env.base_lin_vel[robot_index, 2].item(),
+        #         'base_vel_yaw': env.base_ang_vel[robot_index, 2].item(),
+        #         'contact_forces_z': env.contact_forces[robot_index, env.feet_indices, 2].cpu().numpy()
+        #     }
+        #     )
         # ====================== Log states ======================
-        if infos["episode"]:
-            num_episodes = torch.sum(env.reset_buf).item()
-            if num_episodes>0:
-                logger.log_rewards(infos["episode"], num_episodes)
+        # if infos["episode"]:
+        #     num_episodes = torch.sum(env.reset_buf).item()
+        #     if num_episodes>0:
+        #         logger.log_rewards(infos["episode"], num_episodes)
 
     logger.print_rewards()
     logger.plot_states()

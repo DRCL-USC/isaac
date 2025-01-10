@@ -3,7 +3,7 @@ from .base_config import BaseConfig
 
 
 
-class LeggedRobotManipCfg(BaseConfig):
+class LeggedRobotCfg(BaseConfig):
     class env:
         num_envs = 4096
         num_observations = 235
@@ -116,8 +116,15 @@ class LeggedRobotManipCfg(BaseConfig):
         push_interval_s = 15
         max_push_vel_xy = 1.
         motor_strength = [0.8, 1.0]
-
-
+        randomize_com_displacement = False
+        com_displacement_range = [-0.1, 0.1]
+        randomize_restitution = False
+        restitution_range = [0, 0.5]
+        randomize_ball_restitution = True
+        ball_restitution_range = [0, 0.5]
+        randomize_ball_friction = True
+        ball_friction_range = [0.1, 1.5]
+        
     class rewards:
         class scales:
             termination = -0.0

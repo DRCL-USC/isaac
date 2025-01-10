@@ -183,7 +183,7 @@ class HectorFreeEnv(LeggedRobot):
         self.command_input = self.commands[:, :3] * self.commands_scale
         
         q = (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos
-        dq = self.dof_vel * self.obs_scales.dof_vel
+        dq = (self.dof_pos - self.last_dof_pos) * self.obs_scales.dof_vel / self.dt
         
         diff = self.dof_pos - self.default_dof_pos
         # print(self.dof_pos - self.last_dof_pos)

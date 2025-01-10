@@ -224,13 +224,13 @@
       </geometry>
       <material name="white"/>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <mesh filename="../meshes/thigh_combined_L2.stl" scale="1 1 1"/>
       </geometry>
       <material name="white"/>
-    </collision>
+    </collision> -->
     <!-- <collision>
                 <origin rpy="0 0 0" xyz="${thigh_x} ${thigh_y*mirror} ${thigh_z}"/>
                 <geometry>
@@ -328,16 +328,22 @@
       <material name="red"/>
     </visual>
     <collision>
+          <origin rpy="0 0 0" xyz="0.02 0 -0.03"/>
+                <geometry>
+                     <box size="0.15 0.04 0.02"/>
+                </geometry>      
+    </collision>
+    <!-- <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <mesh filename="../meshes/Foot.STL" scale="1 1 1"/>
       </geometry>
       <material name="red"/>
-    </collision>
+    </collision> -->
     <inertial>
       <origin rpy="0 0 0" xyz="0.010569 0.017949 -0.017118"/>
       <mass value="0.085"/>
-      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00012" iyz="0.0" izz="0.00011"/>
+      <inertia ixx="0.00006" ixy="0.0" ixz="0.0" iyy="0.00016" iyz="0.0" izz="0.00011"/>
     </inertial>
   </link>
   
@@ -467,13 +473,13 @@
       </geometry>
       <material name="white"/>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <mesh filename="../meshes/thigh_combined_R2.stl" scale="1 1 1"/>
       </geometry>
       <material name="white"/>
-    </collision>
+    </collision> -->
     <!-- <collision>
                 <origin rpy="0 0 0" xyz="${thigh_x} ${thigh_y*mirror} ${thigh_z}"/>
                 <geometry>
@@ -571,23 +577,23 @@
       </geometry>
       <material name="red"/>
     </visual>
-    <!-- <collision>
-          <origin rpy="0 0 0" xyz="0 0 0"/>
-                <geometry>
-                     <box size="0.15 0.02 0.04"/>
-                </geometry>      
-            </collision> -->
     <collision>
+          <origin rpy="0 0 0" xyz="0.02 0 -0.03"/>
+                <geometry>
+                     <box size="0.15 0.04 0.02"/>
+                </geometry>      
+    </collision>
+    <!-- <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <mesh filename="../meshes/Foot.STL" scale="1 1 1"/>
       </geometry>
       <material name="red"/>
-    </collision>
+    </collision> -->
     <inertial>
       <origin rpy="0 0 0" xyz="0.010569 -0.017949 -0.017118"/>
       <mass value="0.08592"/>
-      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00012" iyz="0.0" izz="0.00011"/>
+      <inertia ixx="0.00006" ixy="0.0" ixz="0.0" iyy="0.00016" iyz="0.0" izz="0.00011"/>
     </inertial>
   </link>
  

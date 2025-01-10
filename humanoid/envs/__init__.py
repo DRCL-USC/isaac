@@ -39,6 +39,8 @@ from .custom.hector_config import HectorCfg, HectorCfgPPO
 from .custom.hector_env import HectorFreeEnv
 from .custom.hector_w_arm_config import HectorFullCfg, HectorFullCfgPPO
 from .custom.hector_w_arm_env import HectorFullFreeEnv
+from .custom.go1_manip_config import Go1Cfg, Go1CfgPPO
+from .custom.go1_manip_env import Go1FreeEnv
 
 from humanoid.utils.task_registry import task_registry
 
@@ -46,3 +48,4 @@ from humanoid.utils.task_registry import task_registry
 task_registry.register( "humanoid_ppo", XBotLFreeEnv, XBotLCfg(), XBotLCfgPPO() )
 task_registry.register( "hector", HectorFreeEnv, HectorCfg(), HectorCfgPPO() )
 task_registry.register( "hector_full", HectorFullFreeEnv, HectorFullCfg(), HectorFullCfgPPO() )
+task_registry.register( "go1", Go1FreeEnv, Go1Cfg(), Go1CfgPPO() )
