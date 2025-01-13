@@ -184,7 +184,7 @@ class Go1Cfg(LeggedRobotCfg):
         max_contact_force = 180  # Forces above this value are penalized
 
         class scales:
-            termination = 0
+            termination = -1
             # termination = -200.
             # default_joint_pos = 1.6
             # foot_slip = -0.

@@ -34,6 +34,7 @@ import cv2
 import copy
 import numpy as np
 from isaacgym import gymapi
+from isaacgym import gymutil
 from humanoid import LEGGED_GYM_ROOT_DIR
 
 # import isaacgym
@@ -154,6 +155,18 @@ def play(args):
             env.gym.fetch_results(env.sim, True)
             env.gym.step_graphics(env.sim)
             env.gym.render_all_camera_sensors(env.sim)
+
+            #draw the goal of ball
+            marker_geom = gymutil.WireframeSphereGeometry(
+                radius=1.0,
+                color=(1, 0, 0)
+            )
+
+            j = 0
+            goal_pos = env.ball_goals[j]  # [x, y, z], shape (3,)
+            sphere_pose = gymapi.Transform()
+            sphere_pose.p = gymapi.Vec3(*goal_pos.cpu().numpy())
+            gymutil.draw_lines(marker_geom, env.gym, env.viewer, env.envs[j], sphere_pose)
 
             env.gym.draw_viewer(env.viewer, env.sim, True)
             env.gym.sync_frame_time(env.sim)

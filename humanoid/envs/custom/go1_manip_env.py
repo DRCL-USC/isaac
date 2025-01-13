@@ -321,7 +321,7 @@ class Go1FreeEnv(LeggedRobotManip):
     
     # def _reward_default_joint_pos(self):
     #     """
-    #     Calculates the reward for keeping joint positions close to default positions, with a focus 
+    #     Calculates the reward for keeping joint positions close to default positions, with a focus
     #     on penalizing deviation in yaw and roll directions. Excludes yaw and roll from the main penalty.
     #     """
     #     joint_diff = self.dof_pos - self.default_joint_pd_target
@@ -368,9 +368,13 @@ class Go1FreeEnv(LeggedRobotManip):
     #     # Penalize collisions on selected bodies
     #     return torch.sum(1.*(torch.norm(self.contact_forces[:, self.penalised_contact_indices, :], dim=-1) > 0.1), dim=1)
     
-    # def _reward_termination(self):
-    #     # Terminal reward / penalty
-    #     return self.reset_buf * ~self.time_out_buf
+    def _reward_termination(self):
+        # Terminal reward / penalty
+        # distance from goal
+        ball_pos = self.root_states[self.object_actor_idxs, 0:3]
+        diff = ball_pos - self.ball_goals
+        dist = torch.norm(diff, dim=-1)
+        return self.reset_buf * ~self.time_out_buf * dist
     
     # def _reward_dof_pos_limits(self):
     #     # Penalize dof positions too close to the limit

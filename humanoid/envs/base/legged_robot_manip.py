@@ -267,6 +267,9 @@ class LeggedRobotManip(BaseTask):
         # for i in range(len(self.lag_buffer)):
         #     self.lag_buffer[i][env_ids, :] = 0
 
+
+
+
     def set_idx_pose(self, env_ids, dof_pos, base_state):
         if len(env_ids) == 0:
             return
@@ -589,13 +592,21 @@ class LeggedRobotManip(BaseTask):
             # base origins
         self.root_states[object_env_ids] = self.object_init_state
         self.root_states[object_env_ids, :3] += self.env_origins[env_ids]
-
         self.root_states[object_env_ids,0:3] += 2*(torch.rand(len(env_ids), 3, dtype=torch.float, device=self.device,
                                                  requires_grad=False)-0.5) * torch.tensor(cfg.ball.init_pos_range,device=self.device,
                                                      requires_grad=False)
         self.root_states[object_env_ids,7:10] += 2*(torch.rand(len(env_ids), 3, dtype=torch.float, device=self.device,
                                                      requires_grad=False)-0.5) * torch.tensor(cfg.ball.init_vel_range,device=self.device,
                                                      requires_grad=False)
+        #reset the goal of ball
+        x_min, x_max = -255.0, 255.0
+        y_min, y_max = -255.0, 255.0
+
+        random_xyz = torch.rand(len(env_ids), 3, device=self.device)
+        random_xyz[:, 0] = random_xyz[:, 0] * (x_max - x_min) + x_min
+        random_xyz[:, 1] = random_xyz[:, 1] * (y_max - y_min) + y_min 
+        random_xyz[:, 2] = 0.0
+        self.ball_goals[env_ids] = random_xyz
                                                      
 
         # apply reset states
@@ -768,6 +779,7 @@ class LeggedRobotManip(BaseTask):
         self.last_object_local_pos = torch.clone(self.object_local_pos)
         self.object_lin_vel = self.asset.get_lin_vel()
         self.object_ang_vel = self.asset.get_ang_vel()
+
          
 
         # initialize some data used later on
@@ -848,8 +860,8 @@ class LeggedRobotManip(BaseTask):
         self.reward_functions = []
         self.reward_names = []
         for name, scale in self.reward_scales.items():
-            if name=="termination":
-                continue
+            # if name=="termination":
+            #     continue
             self.reward_names.append(name)
             name = '_reward_' + name
             self.reward_functions.append(getattr(self, name))
@@ -910,6 +922,9 @@ class LeggedRobotManip(BaseTask):
 
         self.ball_init_pose = gymapi.Transform()
         self.ball_init_pose.p = gymapi.Vec3(*self.object_init_state[:3])
+        #show the goal of ball
+        self.ball_goals = torch.zeros(self.num_envs, 3, dtype=torch.float, device=self.device)
+        marker_geom = gymutil.WireframeSphereGeometry(radius=0.05, color=(1, 0, 0))
 
         # save body names from the asset
         body_names = self.gym.get_asset_rigid_body_names(self.robot_asset)
@@ -993,7 +1008,7 @@ class LeggedRobotManip(BaseTask):
             self.object_actor_handles.append(ball_handle)
             self.object_rigid_body_idxs.append(ball_idx)
             self.object_actor_idxs.append(self.gym.get_actor_index(env_handle, ball_handle, gymapi.DOMAIN_SIM))
-                
+
 
             self.envs.append(env_handle)
 
