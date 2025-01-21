@@ -10,7 +10,8 @@ class Go1Cfg(LeggedRobotCfg):
         c_frame_stack = 15
         num_single_obs = 45
         num_observations = int(frame_stack * num_single_obs)
-        single_num_privileged_obs = 45
+        # single_num_privileged_obs = 45
+        single_num_privileged_obs = 104
         # + 187
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
         num_actions = 12
@@ -31,8 +32,10 @@ class Go1Cfg(LeggedRobotCfg):
         foot_name = "foot"
         knee_name = "calf"
 
-        terminate_after_contacts_on = ['base', 'hip']
-        penalize_contacts_on = ["base", "hip"]
+        # terminate_after_contacts_on = ['base', 'hip']
+        terminate_after_contacts_on = ['base']
+        # penalize_contacts_on = ["base", "hip"]
+        penalize_contacts_on = ['base' ,"thigh", "calf"]
         self_collisions = 1  # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
         replace_cylinder_with_capsule = False
@@ -68,7 +71,7 @@ class Go1Cfg(LeggedRobotCfg):
             height_measurements = 0.1
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.4]
+        pos = [0.0, 0.0, 0.34]
 
         default_joint_angles = {  # = target angles [rad] when action = 0.0
         'FL_hip_joint': 0.1,  # [rad]
@@ -170,7 +173,7 @@ class Go1Cfg(LeggedRobotCfg):
             heading = [-3.14, 3.14]
 
     class rewards:
-        base_height_target = 0.3
+        # base_height_target = 0.3
         min_dist = 0.1
         max_dist = 0.5
         # put some settings here for LLM parameter tuning
@@ -178,32 +181,68 @@ class Go1Cfg(LeggedRobotCfg):
         target_feet_height = 0.06        # m
         cycle_time = 0.64                # sec
         # if true negative total rewards are clipped at zero (avoids early termination problems)
-        only_positive_rewards = False
+        # only_positive_rewards = False
         # tracking reward = exp(error*sigma)
-        tracking_sigma = 0.25
-        max_contact_force = 180  # Forces above this value are penalized
+        # tracking_sigma = 0.25
+        # max_contact_force = 180  # Forces above this value are penalized
+        only_positive_rewards = True  # if true negative total rewards are clipped at zero (avoids early termination problems)
+        tracking_sigma = 0.25  # tracking reward = exp(-error^2/sigma)
+        soft_dof_pos_limit = 1.  # percentage of urdf limits, values above this limit are penalized
+        soft_dof_vel_limit = 1.
+        max_contact_force = 100.  # forces above this value are penalized
+        soft_dof_pos_limit = 0.9
+        base_height_target = 0.25
+
+
+
 
         class scales:
-            termination = -1
-            # termination = -200.
-            # default_joint_pos = 1.6
-            # foot_slip = -0.
-            # feet_clearance = 0.0
-            # tracking_lin_vel = 1.5
-            # tracking_ang_vel = 0.8
-            # ang_vel_xy = -0.8
-            # torques = -8.e-6
-            # dof_acc = -5.e-7
-            # lin_vel_z = -1.5
-            # feet_air_time = 30.
-            # orientation = -1.0
-            # dof_pos_limits = -1.
-            # base_height = -10.0
-            # no_fly = 0.0
-            # dof_vel = -2.e-4
-            # feet_contact_forces = -0.01
+                # termination = -1
+                # termination = -200.
+                # default_joint_pos = 1.6
+                # foot_slip = -0.
+                # feet_clearance = 0.0
+                # tracking_lin_vel = 1.5
+                # tracking_ang_vel = 0.8
+                # ang_vel_xy = -0.8
+                # torques = -8.e-6
+                # dof_acc = -5.e-7
+                # lin_vel_z = -1.5
+                # feet_air_time = 30.
+                # orientation = -1.0
+                # dof_pos_limits = -1.
+                # base_height = -10.0
+                # no_fly = 0.0
+                # dof_vel = -2.e-4
+                # feet_contact_forces = -0.01
+                feet_contact_number = 2
+                # action_rate = -0.1
+                # Task-related rewards
+                # termination = -1.0  # Penalty for termination, encourages completing the task
+                # tracking_lin_vel = 1.5  # Reward for accurately tracking linear velocity
+                # tracking_ang_vel = 0.8  # Reward for accurately tracking angular velocity
+                # feet_contact_number = 2.0  # Reward for maintaining correct foot contact count
+                # default_joint_pos = 1.6
+                # collision = -1
+                termination = 200.0
+                tracking_lin_vel = 1.0
+                tracking_ang_vel = 0.5
+                lin_vel_z = -2.0
+                ang_vel_xy = -0.05
+                orientation = -1.
+                torques = -0.0002
+                dof_vel = -2.e-4
+                dof_acc = -2.5e-7
+                base_height = -10.
+                feet_air_time = 1.0
+                collision = -1.
+                feet_stumble = -0.0
+                action_rate = -0.01
+                stand_still = -0.
+                dof_pos_limits = -10.0
+                default_joint_pos = 1.6
 
-            # action_rate = -0.1
+
 
     class normalization:
         class obs_scales:
@@ -241,11 +280,11 @@ class Go1CfgPPO(LeggedRobotCfgPPO):
         policy_class_name = 'ActorCritic'
         algorithm_class_name = 'PPO'
         num_steps_per_env = 60  # per iteration
-        max_iterations = 5001  # number of policy updates
+        max_iterations = 10001  # number of policy updates
 
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.
-        experiment_name = 'hector'
+        experiment_name = 'go1'
         run_name = ''
         # Load and resume
         resume = False

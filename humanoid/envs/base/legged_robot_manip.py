@@ -261,6 +261,20 @@ class LeggedRobotManip(BaseTask):
         self.reset_buf[env_ids] = 1
         
         # self.extras = self.logger.populate_log(env_ids)
+        # fill extras
+        self.extras["episode"] = {}
+        for key in self.episode_sums.keys():
+            self.extras["episode"]['rew_' + key] = torch.mean(
+                self.episode_sums[key][env_ids]) / self.max_episode_length_s
+            self.episode_sums[key][env_ids] = 0.
+        # log additional curriculum info
+        if self.cfg.terrain.mesh_type == "trimesh":
+            self.extras["episode"]["terrain_level"] = torch.mean(self.terrain_levels.float())
+        if self.cfg.commands.curriculum:
+            self.extras["episode"]["max_command_x"] = self.command_ranges["lin_vel_x"][1]
+        # send timeout info to the algorithm
+        if self.cfg.env.send_timeouts:
+            self.extras["time_outs"] = self.time_out_buf
 
         self.gait_indices[env_ids] = 0
 
@@ -599,8 +613,8 @@ class LeggedRobotManip(BaseTask):
                                                      requires_grad=False)-0.5) * torch.tensor(cfg.ball.init_vel_range,device=self.device,
                                                      requires_grad=False)
         #reset the goal of ball
-        x_min, x_max = -255.0, 255.0
-        y_min, y_max = -255.0, 255.0
+        x_min, x_max = -50.0, 50.0
+        y_min, y_max = -50.0, 50.0
 
         random_xyz = torch.rand(len(env_ids), 3, device=self.device)
         random_xyz[:, 0] = random_xyz[:, 0] * (x_max - x_min) + x_min

@@ -140,7 +140,7 @@ class LeggedRobotCfg(BaseConfig):
             feet_air_time =  1.0
             collision = -1.
             feet_stumble = -0.0 
-            action_rate = -0.
+            action_rate = -0.01
             stand_still = -0.
 
         only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
@@ -155,7 +155,9 @@ class LeggedRobotCfg(BaseConfig):
             dof_vel = 0.05
             height_measurements = 5.0
         clip_observations = 100.
-        clip_actions = 0.
+        # clip_actions = 0.
+        clip_actions = 100
+
 
     class noise:
         add_noise = True

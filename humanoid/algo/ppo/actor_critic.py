@@ -60,7 +60,7 @@ class ActorCritic(nn.Module):
                 actor_layers.append(nn.Linear(actor_hidden_dims[l], actor_hidden_dims[l + 1]))
                 actor_layers.append(activation)
         self.actor = nn.Sequential(*actor_layers)
-
+    
         # Value function
         critic_layers = []
         critic_layers.append(nn.Linear(mlp_input_dim_c, critic_hidden_dims[0]))

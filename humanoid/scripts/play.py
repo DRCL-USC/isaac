@@ -129,7 +129,8 @@ def play(args):
 
     for i in tqdm(range(stop_state_log)):
 
-        actions = policy(obs.detach()) * 0.
+        # actions = policy(obs.detach()) * 0.
+        actions = policy(obs.detach())
         
         if FIX_COMMAND:
             env.commands[:, 0] = -0.  # 1.0
@@ -149,7 +150,6 @@ def play(args):
             env.commands[:, 2] = 0.
             # env.commands[:, 2] = 0.5
         # print(env.contact_forces[robot_index, env.feet_indices, 2])
-
         obs, critic_obs, rews, dones, infos = env.step(actions.detach())
         if RENDER:
             env.gym.fetch_results(env.sim, True)
