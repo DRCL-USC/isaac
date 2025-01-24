@@ -80,7 +80,7 @@ class LeggedRobot(BaseTask):
         self._init_buffers()
         self._prepare_reward_function()
         self.init_done = True
-        self.motor_strength = 1
+        # self.motor_strength = 1
 
     def step(self, actions):
         """ Apply actions, simulate, call self.post_physics_step()
@@ -111,8 +111,8 @@ class LeggedRobot(BaseTask):
 
     def reset(self):
         """ Reset all robots"""
-        strength_range = self.cfg.domain_rand.motor_strength
-        self.motor_strength = strength_range[0] + np.random.random()*(strength_range[1] - strength_range[0])
+        # strength_range = self.cfg.domain_rand.motor_strength
+        # self.motor_strength = strength_range[0] + np.random.random()*(strength_range[1] - strength_range[0])
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
         obs, privileged_obs, _, _, _ = self.step(torch.zeros(
             self.num_envs, self.num_actions, device=self.device, requires_grad=False))
@@ -269,6 +269,8 @@ class LeggedRobot(BaseTask):
 
             for s in range(len(props)):
                 props[s].friction = self.friction_coeffs[env_id]
+            
+            
 
             self.env_frictions[env_id] = self.friction_coeffs[env_id]
         return props
@@ -295,14 +297,59 @@ class LeggedRobot(BaseTask):
                 self.dof_pos_limits[i, 1] = props["upper"][i].item() * self.cfg.safety.pos_limit
                 self.dof_vel_limits[i] = props["velocity"][i].item() * self.cfg.safety.vel_limit
                 self.torque_limits[i] = props["effort"][i].item() * self.cfg.safety.torque_limit
+        
+        # randomization of the motor torques for real machine
+        if self.cfg.domain_rand.randomize_calculated_torque:
+            self.torque_multiplier[env_id,:] = torch_rand_float(self.cfg.domain_rand.torque_multiplier_range[0], self.cfg.domain_rand.torque_multiplier_range[1], (1,self.num_actions), device=self.device)
+
+         # randomization of the motor zero calibration for real machine
+        if self.cfg.domain_rand.randomize_motor_zero_offset:
+            self.motor_zero_offsets[env_id, :] = torch_rand_float(self.cfg.domain_rand.motor_zero_offset_range[0], self.cfg.domain_rand.motor_zero_offset_range[1], (1,self.num_actions), device=self.device)
+        
+        # randomization of the motor pd gains
+        if self.cfg.domain_rand.randomize_pd_gains:
+            self.p_gains_multiplier[env_id, :] = torch_rand_float(self.cfg.domain_rand.stiffness_multiplier_range[0], self.cfg.domain_rand.stiffness_multiplier_range[1], (1,self.num_actions), device=self.device)
+            self.d_gains_multiplier[env_id, :] =  torch_rand_float(self.cfg.domain_rand.damping_multiplier_range[0], self.cfg.domain_rand.damping_multiplier_range[1], (1,self.num_actions), device=self.device)   
+        
+        # randomization of the motor frictions in issac gym 
+        if self.cfg.domain_rand.randomize_joint_friction:                      
+            self.joint_friction_coeffs[env_id, 0] = torch_rand_float(self.cfg.domain_rand.joint_friction_range[0], self.cfg.domain_rand.joint_friction_range[1], (1, 1), device=self.device)
+        
+        # randomization of the motor dampings in issac gym
+        if self.cfg.domain_rand.randomize_joint_damping:
+            self.joint_damping_coeffs[env_id, 0] = torch_rand_float(self.cfg.domain_rand.joint_damping_range[0], self.cfg.domain_rand.joint_damping_range[1], (1, 1), device=self.device)
+        
+        # randomization of the motor armature in issac gym
+        if self.cfg.domain_rand.randomize_joint_armature:
+            self.joint_armatures[env_id, 0] = torch_rand_float(self.cfg.domain_rand.joint_armature_range[0], self.cfg.domain_rand.joint_armature_range[1], (1, 1), device=self.device)
+        
+        for i in range(len(props)):
+             props["friction"][i] *= self.joint_friction_coeffs[env_id, 0]
+             props["damping"][i] *= self.joint_damping_coeffs[env_id, 0]
+             props["armature"][i] = self.joint_armatures[env_id, 0]
+
         return props
 
     def _process_rigid_body_props(self, props, env_id):
         # randomize base mass
         if self.cfg.domain_rand.randomize_base_mass:
-            rng = self.cfg.domain_rand.added_mass_range
+            rng = self.cfg.domain_rand.added_base_mass_range
             props[0].mass += np.random.uniform(rng[0], rng[1])
         self.body_mass[env_id] = props[0].mass
+
+        # randomize link masses
+        if self.cfg.domain_rand.randomize_link_mass:
+            self.multiplied_link_masses_ratio = torch_rand_float(self.cfg.domain_rand.multiplied_link_mass_range[0], self.cfg.domain_rand.multiplied_link_mass_range[1], (1, self.num_bodies-1), device=self.device)
+    
+            for i in range(1, len(props)):
+                props[i].mass *= self.multiplied_link_masses_ratio[0,i-1]
+
+        # randomize base com
+        if self.cfg.domain_rand.randomize_base_com:
+            self.added_base_com = torch_rand_float(self.cfg.domain_rand.added_base_com_range[0], self.cfg.domain_rand.added_base_com_range[1], (1, 3), device=self.device)
+            props[0].com += gymapi.Vec3(self.added_base_com[0, 0], self.added_base_com[0, 1],
+                                    self.added_base_com[0, 2])
+            
         return props
     
     def _post_physics_step_callback(self):
@@ -354,9 +401,12 @@ class LeggedRobot(BaseTask):
         """
         # pd controller
         actions_scaled = actions * self.cfg.control.action_scale
-        p_gains = self.p_gains
-        d_gains = self.d_gains
-        torques = p_gains * (actions_scaled + self.default_dof_pos - self.dof_pos) - d_gains * self.dof_vel
+        p_gains = self.p_gains * self.p_gains_multiplier
+        d_gains = self.d_gains * self.d_gains_multiplier
+        torques = p_gains * (actions_scaled + self.default_dof_pos - self.dof_pos + self.motor_zero_offsets) - d_gains * (self.dof_pos - self.last_dof_pos)/self.dt
+        # self.dof_vel
+
+        torques *= self.torque_multiplier
 
         # torques *= self.motor_strength
         return torch.clip(torques, -self.torque_limits, self.torque_limits)
@@ -470,6 +520,18 @@ class LeggedRobot(BaseTask):
         self.forward_vec = to_torch([1., 0., 0.], device=self.device).repeat((self.num_envs, 1))
         self.torques = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.p_gains = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
+        self.p_gains_multiplier = torch.ones(self.num_envs,self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
+        self.d_gains_multiplier = torch.ones(self.num_envs,self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
+        self.joint_friction_coeffs = torch.ones(self.num_envs, 1, dtype=torch.float, device=self.device,requires_grad=False)
+
+        self.joint_damping_coeffs = torch.ones(self.num_envs, 1, dtype=torch.float, device=self.device,requires_grad=False)
+
+        self.joint_armatures = torch.zeros(self.num_envs, 1, dtype=torch.float, device=self.device,requires_grad=False)  
+            
+        self.torque_multiplier = torch.ones(self.num_envs, self.num_actions, dtype=torch.float, device=self.device,
+                                          requires_grad=False)
+        self.motor_zero_offsets = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device,
+                                         requires_grad=False) 
         self.d_gains = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.actions = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.last_actions = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
@@ -646,6 +708,28 @@ class LeggedRobot(BaseTask):
         start_pose = gymapi.Transform()
         start_pose.p = gymapi.Vec3(*self.base_init_state[:3])
 
+        self.p_gains_multiplier = torch.ones(self.num_envs,self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
+        self.d_gains_multiplier = torch.ones(self.num_envs,self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
+        self.joint_friction_coeffs = torch.ones(self.num_envs, 1, dtype=torch.float, device=self.device,requires_grad=False)
+
+        self.joint_damping_coeffs = torch.ones(self.num_envs, 1, dtype=torch.float, device=self.device,requires_grad=False)
+
+        self.joint_armatures = torch.zeros(self.num_envs, 1, dtype=torch.float, device=self.device,requires_grad=False)  
+            
+        self.torque_multiplier = torch.ones(self.num_envs, self.num_actions, dtype=torch.float, device=self.device,
+                                          requires_grad=False)
+        self.motor_zero_offsets = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device,
+                                         requires_grad=False) 
+
+        self.joint_friction_coeffs = torch.ones(self.num_envs, 1, dtype=torch.float, device=self.device,requires_grad=False)
+
+        self.joint_damping_coeffs = torch.ones(self.num_envs, 1, dtype=torch.float, device=self.device,requires_grad=False)
+            
+        self.torque_multiplier = torch.ones(self.num_envs, self.num_actions, dtype=torch.float, device=self.device,
+                                          requires_grad=False)
+        self.motor_zero_offsets = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device,
+                                         requires_grad=False) 
+
         self._get_env_origins()
         env_lower = gymapi.Vec3(0., 0., 0.)
         env_upper = gymapi.Vec3(0., 0., 0.)
@@ -654,6 +738,7 @@ class LeggedRobot(BaseTask):
         self.env_frictions = torch.zeros(self.num_envs, 1, dtype=torch.float32, device=self.device)
 
         self.body_mass = torch.zeros(self.num_envs, 1, dtype=torch.float32, device=self.device, requires_grad=False)
+
         
         for i in range(self.num_envs):
             # create env instance

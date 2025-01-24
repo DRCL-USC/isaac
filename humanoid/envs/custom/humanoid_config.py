@@ -66,7 +66,7 @@ class XBotLCfg(LeggedRobotCfg):
         self_collisions = 0  # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
         replace_cylinder_with_capsule = False
-        fix_base_link = False
+        fix_base_link = True
 
     class terrain(LeggedRobotCfg.terrain):
         mesh_type = 'plane'
@@ -123,8 +123,8 @@ class XBotLCfg(LeggedRobotCfg):
                    10, 'knee': 10, 'ankle': 10}
 
         # action scale: target angle = actionScale * action + defaultAngle
-        action_scale = 0.25
-        # decimation: Number of control action updates @ sim DT per policy DT
+        action_scale = 0.
+        # decimation: Numbr of control action updates @ sim DT per policy DT
         decimation = 10  # 100hz
 
     class sim(LeggedRobotCfg.sim):

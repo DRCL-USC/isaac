@@ -61,5 +61,6 @@ videos
 # resources
 
 # other
+*.onnx
 *.egg-info
 __pycache__
