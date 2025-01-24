@@ -146,12 +146,12 @@ class HectorFreeEnv(LeggedRobot):
             self.cfg.env.num_single_obs, device=self.device)
         self.add_noise = self.cfg.noise.add_noise
         noise_scales = self.cfg.noise.noise_scales
-        noise_vec[0: 5] = 0.  # commands
-        noise_vec[5: 15] = noise_scales.dof_pos * self.obs_scales.dof_pos
-        noise_vec[15: 25] = noise_scales.dof_vel * self.obs_scales.dof_vel
-        noise_vec[25: 35] = 0.  # previous actions
-        noise_vec[35: 38] = noise_scales.ang_vel * self.obs_scales.ang_vel   # ang vel
-        noise_vec[38: 42] = noise_scales.quat * self.obs_scales.quat         # euler x,y
+        noise_vec[0: 3] = 0.  # commands
+        noise_vec[3: 13] = noise_scales.dof_pos * self.obs_scales.dof_pos
+        noise_vec[13: 23] = noise_scales.dof_vel * self.obs_scales.dof_vel
+        noise_vec[23: 33] = 0.  # previous actions
+        noise_vec[33: 36] = noise_scales.ang_vel * self.obs_scales.ang_vel   # ang vel
+        noise_vec[36: 39] = noise_scales.quat * self.obs_scales.quat         # euler x,y
         return noise_vec
 
 
@@ -183,7 +183,17 @@ class HectorFreeEnv(LeggedRobot):
         self.command_input = self.commands[:, :3] * self.commands_scale
         
         q = (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos
-        dq = self.dof_vel * self.obs_scales.dof_vel
+        dq = (self.dof_pos - self.last_dof_pos) * self.obs_scales.dof_vel / self.dt
+
+        # if self.cfg.domain_rand.randomize_obs_motor_latency:
+        #     self.obs_motor = self.obs_motor_latency_buffer[torch.arange(self.num_envs), :, self.obs_motor_latency_simstep.long()]
+        # else:
+        #     self.obs_motor = torch.cat((q, dq), 1)
+
+        # if self.cfg.domain_rand.randomize_obs_imu_latency:
+        #     self.obs_imu = self.obs_imu_latency_buffer[torch.arange(self.num_envs), :, self.obs_imu_latency_simstep.long()]
+        # else:              
+        #     self.obs_imu = torch.cat((self.base_ang_vel * self.obs_scales.ang_vel, self.base_euler_xyz * self.obs_scales.quat), 1)
         
         diff = self.dof_pos - self.default_dof_pos
         # print(self.dof_pos - self.last_dof_pos)
@@ -191,7 +201,8 @@ class HectorFreeEnv(LeggedRobot):
             self.command_input,
             (self.dof_pos - self.default_joint_pd_target) * \
             self.obs_scales.dof_pos,  # 10
-            self.dof_vel * self.obs_scales.dof_vel,  # 10
+            self.dof_pos,
+            dq,  # 10
             self.actions,  # 10
             # diff,  # 10
             self.base_lin_vel * self.obs_scales.lin_vel,  # 3
@@ -204,8 +215,8 @@ class HectorFreeEnv(LeggedRobot):
             self.rand_push_torque,  # 3
             self.env_frictions,  # 1
             # self.cfg.domain_rand.action_noise, # 1
-            self.body_mass / 30.,  # 1
-            # stance_mask,  # 2
+            self.body_mass,  # 1
+            stance_mask,  # 2
             contact_mask,  # 2
         ), dim=-1)
 
@@ -223,7 +234,7 @@ class HectorFreeEnv(LeggedRobot):
             self.privileged_obs_buf = torch.cat((self.command_input,
                 (self.dof_pos - self.default_joint_pd_target) * \
                 self.obs_scales.dof_pos,  # 10
-                self.dof_vel * self.obs_scales.dof_vel,  # 10
+                dq * self.obs_scales.dof_vel,  # 10
                 self.actions,  # 10
                 self.base_lin_vel * self.obs_scales.lin_vel,  # 3
                 self.base_ang_vel * self.obs_scales.ang_vel,  # 3
@@ -273,9 +284,7 @@ class HectorFreeEnv(LeggedRobot):
         Rewards or penalizes depending on whether the foot contact matches the expected gait phase.
         """
         contact = self.contact_forces[:, self.feet_indices, 2] > 1.
-        foot_speed_norm = torch.norm(self.rigid_state[:, self.feet_indices, 7:9], dim=2)
-        foot_speed_norm *= torch.norm(self.rigid_state[:, self.feet_indices, 7:9]) < 0.05
-        stance_mask = foot_speed_norm
+        stance_mask = self._get_gait_phase()
         reward = torch.where(contact == stance_mask, 1, -0.3)
         return torch.mean(reward, dim=1)
 
@@ -285,13 +294,11 @@ class HectorFreeEnv(LeggedRobot):
         and the speed of the feet. A contact threshold is used to determine if the foot is in contact 
         with the ground. The speed of the foot is calculated and scaled by the contact condition.
         """
-        contact = torch.norm(self.contact_forces[:, self.feet_indices, :3], dim=2) > 1.
-        contact_feet_vel = self.rigid_state[:, self.feet_indices, 7:10] * contact.unsqueeze(-1)
-        penalize = torch.square(contact_feet_vel[:, :, :3])
-        return torch.sum(penalize, dim=(1,2))
-    
-        # print(rew)
-        return torch.sum(rew, dim=1)    
+        contact = self.contact_forces[:, self.feet_indices, 2] > 1.
+        foot_speed_norm = torch.norm(self.rigid_state[:, self.feet_indices, 7:9], dim=2)
+        rew = torch.sqrt(foot_speed_norm)
+        rew *= contact
+        return torch.sum(rew, dim=1)   
     
     def _reward_feet_clearance(self):
         """
@@ -302,7 +309,7 @@ class HectorFreeEnv(LeggedRobot):
         contact = self.contact_forces[:, self.feet_indices, 2] > 1.
 
         # Get the z-position of the feet and compute the change in z-position
-        feet_z = self.rigid_state[:, self.feet_indices, 2]
+        feet_z = self.rigid_state[:, self.feet_indices, 2] - 0.05
         delta_z = feet_z - self.last_feet_z
         self.feet_height += delta_z
         self.last_feet_z = feet_z
@@ -326,7 +333,7 @@ class HectorFreeEnv(LeggedRobot):
         right_yaw_roll = joint_diff[:,5:7]
         yaw_roll = torch.norm(left_yaw_roll, dim=1) + torch.norm(right_yaw_roll, dim=1)
         yaw_roll = torch.clamp(yaw_roll - 0.1, 0, 50)
-        return torch.exp(-yaw_roll * 1.0) - 0.01 * torch.norm(joint_diff, dim=1)
+        return torch.exp(-yaw_roll * 5.0) - 0.01 * torch.norm(joint_diff, dim=1)
     
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity
@@ -351,7 +358,7 @@ class HectorFreeEnv(LeggedRobot):
 
     def _reward_dof_vel(self):
         # Penalize dof velocities
-        return torch.sum(torch.square(self.dof_vel), dim=1)
+        return torch.sum(torch.square((self.dof_pos - self.last_dof_pos) / self.dt), dim=1)
     
     def _reward_dof_acc(self):
         # Penalize dof accelerations
@@ -413,7 +420,7 @@ class HectorFreeEnv(LeggedRobot):
         first_contact = (self.feet_air_time > 0.) * contact_filt
         self.feet_air_time += self.dt
         
-        rew_airTime = torch.sum((self.feet_air_time - 0.5) * first_contact, dim=1) # reward only on first contact with the ground
+        rew_airTime = torch.sum((self.feet_air_time - 0.2) * first_contact, dim=1) # reward only on first contact with the ground
         # rew_airTime *= torch.norm(self.commands[:, :3], dim=1) > 0.1 #no reward for zero command9
         # rew_airTime *= torch.logical_not(torch.logical_and(torch.norm(self.base_lin_vel[:, :2], dim=1) > 0.05, torch.abs(self.base_ang_vel[:, 2]) > 0.05)) #no reward when robot is not moving
         self.feet_air_time *= ~contact_filt

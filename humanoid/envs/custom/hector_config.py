@@ -8,10 +8,10 @@ class HectorCfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
         # change the observation dim
         frame_stack = 15
-        c_frame_stack = 15
+        c_frame_stack = 1
         num_single_obs = 39
         num_observations = int(frame_stack * num_single_obs)
-        single_num_privileged_obs = 66 
+        single_num_privileged_obs = 78 
         # + 187
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
         num_actions = 10
@@ -33,7 +33,7 @@ class HectorCfg(LeggedRobotCfg):
         knee_name = "calf"
 
         terminate_after_contacts_on = ['base', 'hip']
-        penalize_contacts_on = ["base", "thigh", "hip"]
+        penalize_contacts_on = ["base", "thigh", "calf", "hip"]
         self_collisions = 1  # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
         replace_cylinder_with_capsule = False
@@ -63,7 +63,7 @@ class HectorCfg(LeggedRobotCfg):
         class noise_scales:
             dof_pos = 0.05
             dof_vel = 0.5
-            ang_vel = 0.1
+            ang_vel = 0.3
             lin_vel = 0.05
             quat = 0.1
             height_measurements = 0.1
@@ -118,16 +118,53 @@ class HectorCfg(LeggedRobotCfg):
     class domain_rand:
         randomize_friction = True
         friction_range = [0.1, 1.3]
+        restitution_range = [0.0, 0.4]
         randomize_base_mass = True
-        added_mass_range = [-2., 4.]
+        added_base_mass_range = [-3.0, 4.0]
+
+        randomize_base_com = True
+        added_base_com_range = [-0.1, 0.1]
+
+        randomize_pd_gains = True
+        stiffness_multiplier_range = [0.7, 1.2]  
+        damping_multiplier_range = [0.8, 1.2]   
+
+        randomize_link_mass = True
+        multiplied_link_mass_range = [0.8, 1.2]
+
+        randomize_motor_zero_offset = True
+        motor_zero_offset_range = [-0.035, 0.035] # Offset to add to the motor angles
+
+        randomize_calculated_torque = True
+        torque_multiplier_range = [0.7, 1.4]
+
+        randomize_joint_friction = True
+        joint_friction_range = [0.01, 1.4]
+
+        randomize_joint_damping = True
+        joint_damping_range = [0.3, 1.5]
+
+        randomize_joint_armature = True
+        joint_armature_range = [0.008, 0.06]    #
+
         push_robots = True
         push_interval_s = 4
-        max_push_vel_xy = 0.2
-        max_push_ang_vel = 0.3
+        max_push_vel_xy = 0.5
+        max_push_ang_vel = 0.8
         # dynamic randomization
         action_delay = 0.0
         action_noise = 0.08
         motor_strength = [0.8, 1.1]
+
+        add_cmd_action_latency = False
+        randomize_cmd_action_latency = False
+        range_cmd_action_latency = [1, 10]
+        
+        add_obs_latency = False # no latency for obs_action
+        randomize_obs_motor_latency = False
+        randomize_obs_imu_latency = False
+        range_obs_motor_latency = [1, 10]
+        range_obs_imu_latency = [1, 10]
 
     class commands(LeggedRobotCfg.commands):
         # Vers: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
@@ -148,33 +185,34 @@ class HectorCfg(LeggedRobotCfg):
         # put some settings here for LLM parameter tuning
         target_joint_pos_scale = 0.17    # rad
         target_feet_height = 0.06        # m
-        cycle_time = 0.64                # sec
+        cycle_time = 0.8                # sec
         # if true negative total rewards are clipped at zero (avoids early termination problems)
         only_positive_rewards = False
         # tracking reward = exp(error*sigma)
         tracking_sigma = 0.25
-        max_contact_force = 150  # Forces above this value are penalized
+        max_contact_force = 180  # Forces above this value are penalized
 
         class scales:
-            termination = -200.
-            default_joint_pos = 1.5
-            foot_slip = -0.0
-            feet_clearance = 0.5
-            tracking_lin_vel = 2.0
-            tracking_ang_vel = 1.0
-            ang_vel_xy = -0.5
-            torques = -1.e-7
-            dof_acc = -1.e-8
-            lin_vel_z = -0.2
-            feet_air_time = 30.
+            termination = -0.
+            default_joint_pos = 1.8
+            feet_contact_number = 2.5
+            foot_slip = -0.2
+            feet_clearance = 0.2
+            tracking_lin_vel = 2.5
+            tracking_ang_vel = 1.8
+            ang_vel_xy = -0.8
+            torques = -1.e-10
+            dof_acc = -5.e-9
+            lin_vel_z = -2.5
+            feet_air_time = 80.
             orientation = -1.0
-            dof_pos_limits = -0.1
-            base_height = -1.0
+            dof_pos_limits = -0.5
+            base_height = -10.0
             no_fly = 0.0
-            dof_vel = -1.e-6
-            feet_contact_forces = -0.5
+            dof_vel = -5.e-5
+            feet_contact_forces = -0.02
 
-            action_rate = -0.01
+            action_rate = -0.05
 
     class normalization:
         class obs_scales:

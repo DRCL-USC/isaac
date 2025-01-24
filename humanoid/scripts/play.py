@@ -164,7 +164,7 @@ def play(args):
             video.write(img[..., :3])
 
         # print(env.dof_pos[robot_index, joint_index].item())
-        print(env.dof_vel)
+        # print(())
         logger.log_states(
             {
                 'dof_pos_target': actions[robot_index, joint_index].item() * env.cfg.control.action_scale,
@@ -194,7 +194,7 @@ def play(args):
         video.release()
 
 if __name__ == '__main__':
-    EXPORT_POLICY = False
+    EXPORT_POLICY = True
     RENDER = True
     FIX_COMMAND = True
     args = get_args()
