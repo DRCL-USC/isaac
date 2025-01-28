@@ -133,7 +133,7 @@ def play(args):
 
     for i in tqdm(range(stop_state_log)):
 
-        actions = policy(obs.detach()) #* 0.
+        actions = policy(obs.detach()) # * 0.
 
         if FIX_COMMAND:
             env.commands[:, 0] = -0.  # 1.0
