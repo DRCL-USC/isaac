@@ -64,3 +64,4 @@ videos
 *.onnx
 *.egg-info
 __pycache__
+.hypothesis/

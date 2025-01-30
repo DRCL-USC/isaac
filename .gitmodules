@@ -1,0 +1,3 @@
+[submodule "biped_mpc_py"]
+    path = humanoid/envs/custom/biped_mpc_py
+    url = git@github.com:jbwenjoy/biped_mpc_py.git
