@@ -63,11 +63,11 @@ class TaskRegistry():
         return env_cfg, train_cfg
     
     def make_env(self, name, args=None, env_cfg=None) -> Tuple[VecEnv, LeggedRobotCfg]:
-        """ Creates an environment either from a registered namme or from the provided config file.
+        """ Creates an environment either from a registered name or from the provided config file.
 
         Args:
             name (string): Name of a registered env.
-            args (Args, optional): Isaac Gym comand line arguments. If None get_args() will be called. Defaults to None.
+            args (Args, optional): Isaac Gym command line arguments. If None get_args() will be called. Defaults to None.
             env_cfg (Dict, optional): Environment config file used to override the registered config. Defaults to None.
 
         Raises:
@@ -85,8 +85,9 @@ class TaskRegistry():
             task_class = self.get_task_class(name)
         else:
             raise ValueError(f"Task with name: {name} was not registered")
+        
+        # load config files
         if env_cfg is None:
-            # load config files
             env_cfg, _ = self.get_cfgs(name)
         # override cfg from args (if specified)
         env_cfg, _ = update_cfg_from_args(env_cfg, None, args)
@@ -94,11 +95,22 @@ class TaskRegistry():
         # parse sim params (convert to dict first)
         sim_params = {"sim": class_to_dict(env_cfg.sim)}
         sim_params = parse_sim_params(args, sim_params)
-        env = task_class(   cfg=env_cfg,
-                            sim_params=sim_params,
-                            physics_engine=args.physics_engine,
-                            sim_device=args.sim_device,
-                            headless=args.headless)
+        
+        # Conditionally pass the action_repeat argument
+        if name == "hector_rlmpc":
+            env = task_class(cfg=env_cfg,
+                             sim_params=sim_params,
+                             physics_engine=args.physics_engine,
+                             sim_device=args.sim_device,
+                             headless=args.headless,
+                             action_repeat=args.action_repeat)
+        else:
+            env = task_class(cfg=env_cfg,
+                             sim_params=sim_params,
+                             physics_engine=args.physics_engine,
+                             sim_device=args.sim_device,
+                             headless=args.headless)
+        
         self.env_cfg_for_wandb = env_cfg
         return env, env_cfg
 

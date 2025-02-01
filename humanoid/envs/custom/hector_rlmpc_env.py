@@ -45,24 +45,27 @@ class HectorMPCFreeEnv(LeggedRobot):
         compute_observations(): Computes the observations.
         reset_idx(env_ids): Resets the environment for the specified environment IDs.
     '''
-    def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
+    def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless, action_repeat=5):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         
         # Initialize attributes first before calling reset
         self.last_feet_z = 0.05
         self.feet_height = torch.zeros((self.num_envs, 2), device=self.device)
         
-        # Initialize MPC related attributes
-        self.mpc = BipedalLocomotionMPC()
-        self.mpc_states = None
-        self.mpc_controls = None  
-        self.mpc_reference = None
-        self.last_mpc_update = 0
-        self.mpc_dt = 0.04
-        self.mpc_steps = int(self.mpc_dt / self.dt)
+        # Initialize MPC related attributes for each environment
+        self.mpc = [BipedalLocomotionMPC() for _ in range(self.num_envs)]
+        self.mpc_states = [None] * self.num_envs
+        self.mpc_controls = [None] * self.num_envs
+        self.mpc_reference = [None] * self.num_envs
+        self.last_mpc_update = [0] * self.num_envs
+        # self.mpc_dt = 0.04
+        # self.mpc_steps = int(self.mpc_dt / self.dt)
         
         # Calculate base euler angles from quaternion
         self.base_euler = torch.zeros((self.num_envs, 3), device=self.device)
+        
+        # Action repeat parameter
+        self.action_repeat = action_repeat
         
         # Now call reset and compute observations
         self.reset_idx(torch.tensor(range(self.num_envs), device=self.device))
@@ -173,33 +176,47 @@ class HectorMPCFreeEnv(LeggedRobot):
         return noise_vec
 
     def step(self, actions):
-        # Update MPC reference from RL commands
-        self.mpc.mpc.update_cmd(actions.cpu().numpy())
+        # Update MPC reference from RL commands for each environment
+        for i in range(self.num_envs):
+            self.mpc[i].mpc.update_cmd(actions[i].cpu().numpy())
         
-        # Run MPC with transformed state
-        if self.episode_length_buf % self.mpc_steps == 0:
-            x_fb = self._get_mpc_state_feedback()
-            q = self.dof_pos.cpu().numpy().flatten()
-            qd = self.dof_vel.cpu().numpy().flatten()
+        # Run MPC with transformed state for each environment
+        for _ in range(self.action_repeat):  # should be similar to self.cfg.control.decimation
+            for i in range(self.num_envs):
+                x_fb = self._get_mpc_state_feedback(i)
+                q = self.dof_pos[i].cpu().numpy().flatten()
+                qd = self.dof_vel[i].cpu().numpy().flatten()
+                
+                print(f"----- Call MPC for env {i} -----")
+                tau, self.mpc_states[i], self.mpc_controls[i], self.mpc_reference[i] = \
+                    self.mpc[i].run_step(x_fb, q, qd, gait=1)
+                
+                self.torques[i] = torch.tensor(tau, device=self.device).squeeze().float()
             
-            tau, self.mpc_states, self.mpc_controls, self.mpc_reference = \
-                self.mpc.run_step(x_fb, self.episode_length_buf.cpu().numpy().item(), q, qd, gait=1)
-            
-            self.torques = torch.tensor(tau, device=self.device).squeeze()
-            # Convert self.toques to float32 and unsqueeze from (10,) to (1, 10)
-            self.torques = self.torques.float().unsqueeze(0)
+            # Simulate the environment with the updated torques
+            self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
+            self.gym.simulate(self.sim)
+            if self.device == 'cpu':
+                self.gym.fetch_results(self.sim, True)
+            self.gym.refresh_dof_state_tensor(self.sim)
         
-        return super().step(actions, control_type="mpc", torques=self.torques)
-
-    def _get_mpc_state_feedback(self):
-        # Get current state in world frame
-        base_pos = self.root_states[:, 0:3].cpu().numpy()
+        # Return the observations, rewards, dones, and infos
+        self.post_physics_step()
+        clip_obs = self.cfg.normalization.clip_observations
+        self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
+        if self.privileged_obs_buf is not None:
+            self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
+        return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras
+    
+    def _get_mpc_state_feedback(self, env_idx):
+        # Get current state in world frame for a specific environment
+        base_pos = self.root_states[env_idx, 0:3].cpu().numpy()
         # Convert quaternion to euler angles
-        base_quat = self.root_states[:, 3:7]
-        self.base_euler = get_euler_xyz_from_quaternion(base_quat)
-        base_ori = self.base_euler.cpu().numpy()
-        base_lin_vel = self.base_lin_vel.cpu().numpy()  
-        base_ang_vel = self.base_ang_vel.cpu().numpy()
+        base_quat = self.root_states[env_idx, 3:7]
+        self.base_euler[env_idx] = get_euler_xyz_from_quaternion(base_quat)
+        base_ori = self.base_euler[env_idx].cpu().numpy()
+        base_lin_vel = self.base_lin_vel[env_idx].cpu().numpy()  
+        base_ang_vel = self.base_ang_vel[env_idx].cpu().numpy()
         
         # Pack state feedback 
         x_fb = np.zeros(12)
@@ -298,7 +315,6 @@ class HectorMPCFreeEnv(LeggedRobot):
         self.obs_history.append(obs_now)
         self.critic_history.append(self.privileged_obs_buf)
 
-
         obs_buf_all = torch.stack([self.obs_history[i]
                                    for i in range(self.obs_history.maxlen)], dim=1)  # N,T,K
 
@@ -307,10 +323,11 @@ class HectorMPCFreeEnv(LeggedRobot):
 
     def reset_idx(self, env_ids):
         super().reset_idx(env_ids)
-        self.mpc_states = None
-        self.mpc_controls = None
-        self.mpc_reference = None
-        self.last_mpc_update = 0
+        for i in env_ids:
+            self.mpc_states[i] = None
+            self.mpc_controls[i] = None
+            self.mpc_reference[i] = None
+            self.last_mpc_update[i] = 0
         for i in range(self.obs_history.maxlen):
             self.obs_history[i][env_ids] *= 0
         for i in range(self.critic_history.maxlen):
@@ -485,6 +502,10 @@ class HectorMPCFreeEnv(LeggedRobot):
         return torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  self.cfg.rewards.max_contact_force).clip(min=0.), dim=1)
 
 def get_euler_xyz_from_quaternion(quat):
+    # If quat is (4,), convert to (1,4)
+    if quat.ndim == 1:
+        quat = quat.unsqueeze(0)
+
     qw = quat[:, 0]
     qx = quat[:, 1] 
     qy = quat[:, 2]

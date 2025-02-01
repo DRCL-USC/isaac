@@ -82,64 +82,31 @@ class LeggedRobot(BaseTask):
         self.init_done = True
         # self.motor_strength = 1
 
-    def step(self, actions, control_type="pos", torques=None):
+    def step(self, actions):
         """ Apply actions, simulate, call self.post_physics_step()
 
         Args:
             actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
-            control_type (str): "pos" or "mpc", default and originally "pos"
-            torques (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env), only used when control_type="mpc"
         """
-        if control_type == "pos":
-            clip_actions = self.cfg.normalization.clip_actions
-            self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
-            # step physics and render each frame
-            for _ in range(self.cfg.control.decimation):
-                self.torques = self._compute_torques(self.actions).view(self.torques.shape)
-                self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
+        clip_actions = self.cfg.normalization.clip_actions
+        self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
+        # step physics and render each frame
+        for _ in range(self.cfg.control.decimation):
+            self.torques = self._compute_torques(self.actions).view(self.torques.shape)
+            self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
 
-                self.gym.simulate(self.sim)
-                if self.device == 'cpu':
-                    self.gym.fetch_results(self.sim, True)
-                self.gym.refresh_dof_state_tensor(self.sim)
-            self.post_physics_step()
+            self.gym.simulate(self.sim)
+            if self.device == 'cpu':
+                self.gym.fetch_results(self.sim, True)
+            self.gym.refresh_dof_state_tensor(self.sim)
+        self.post_physics_step()
 
-            # return clipped obs, clipped states (None), rewards, dones and infos
-            clip_obs = self.cfg.normalization.clip_observations
-            self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
-            if self.privileged_obs_buf is not None:
-                self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
-            return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras
-        
-        elif control_type == "mpc":
-            # Update self.actions
-            clip_actions = self.cfg.normalization.clip_actions
-
-            # Clip torques 
-            # self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
-            self.torques = torch.clip(torques, -clip_actions, clip_actions).to(self.device)
-            
-            # step physics and render each frame
-            for _ in range(self.cfg.control.decimation):
-                self.torques = torques
-                self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
-
-                self.gym.simulate(self.sim)
-                if self.device == 'cpu':
-                    self.gym.fetch_results(self.sim, True)
-                self.gym.refresh_dof_state_tensor(self.sim)
-            self.post_physics_step()
-
-            # return clipped obs, clipped states (None), rewards, dones and infos
-            clip_obs = self.cfg.normalization.clip_observations
-            self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
-            if self.privileged_obs_buf is not None:
-                self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
-            return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras
-
-        else:
-            raise ValueError("Invalid control_type. Expected 'pos' or 'mpc'.")
-
+        # return clipped obs, clipped states (None), rewards, dones and infos
+        clip_obs = self.cfg.normalization.clip_observations
+        self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
+        if self.privileged_obs_buf is not None:
+            self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
+        return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras
 
     def reset(self):
         """ Reset all robots"""

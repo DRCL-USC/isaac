@@ -225,6 +225,12 @@ def get_args():
             "type": int,
             "help": "Maximum number of training iterations. Overrides config file if provided.",
         },
+        {
+            "name": "--action_repeat",
+            "type": int,
+            "default": 5,
+            "help": "Number of times to repeat the action for MPC",
+        },
     ]
     # parse arguments
     args = gymutil.parse_arguments(
