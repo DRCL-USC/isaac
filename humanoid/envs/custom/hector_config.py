@@ -11,7 +11,7 @@ class HectorCfg(LeggedRobotCfg):
         c_frame_stack = 15
         num_single_obs = 39
         num_observations = int(frame_stack * num_single_obs)
-        single_num_privileged_obs = 66 
+        single_num_privileged_obs = 66
         # + 187
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
         num_actions = 10
@@ -110,7 +110,7 @@ class HectorCfg(LeggedRobotCfg):
             rest_offset = 0.0   # [m]
             bounce_threshold_velocity = 0.5  # [m/s]
             max_depenetration_velocity = 1.0
-            max_gpu_contact_pairs = 2**25  # 2**24 -> needed for 8000 envs and more
+            max_gpu_contact_pairs = 2**24  # 2**24 -> needed for 8000 envs and more
             default_buffer_size_multiplier = 5
             # 0: never, 1: last sub-step, 2: all sub-steps (default=2)
             contact_collection = 2

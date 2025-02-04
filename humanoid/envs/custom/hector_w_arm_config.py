@@ -11,7 +11,7 @@ class HectorFullCfg(LeggedRobotCfg):
         c_frame_stack = 15
         num_single_obs = 65
         num_observations = int(frame_stack * num_single_obs)
-        single_num_privileged_obs = 94 
+        single_num_privileged_obs = 94
         # + 187
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
         num_actions = 18
@@ -94,7 +94,7 @@ class HectorFullCfg(LeggedRobotCfg):
 
     class control(LeggedRobotCfg.control):
         # PD Drive parameters:
-        stiffness = {'hip_joint': 80.0, 'hip_roll': 80.0, 'thigh': 80.0,'calf': 80.0, 'toe': 60.0, 
+        stiffness = {'hip_joint': 80.0, 'hip_roll': 80.0, 'thigh': 80.0,'calf': 80.0, 'toe': 60.0,
                      'shoulder_yaw': 30.0, 'shoulder_pitch': 30.0, 'shoulder_roll': 30.0, 'elbow': 30.0}
         damping = {'hip_joint': 5.0, 'hip_roll': 5.0, 'thigh': 5.0, 'calf': 5.0, 'toe': 3.0,
                    'shoulder_yaw': 3.0, 'shoulder_pitch': 3.0, 'shoulder_roll': 3.0, 'elbow': 3.0}
@@ -118,7 +118,7 @@ class HectorFullCfg(LeggedRobotCfg):
             rest_offset = 0.0   # [m]
             bounce_threshold_velocity = 0.1  # [m/s]
             max_depenetration_velocity = 1.0
-            max_gpu_contact_pairs = 2**23  # 2**24 -> needed for 8000 envs and more
+            max_gpu_contact_pairs = 2**24  # 2**24 -> needed for 8000 envs and more
             default_buffer_size_multiplier = 5
             # 0: never, 1: last sub-step, 2: all sub-steps (default=2)
             contact_collection = 2
@@ -168,7 +168,7 @@ class HectorFullCfg(LeggedRobotCfg):
             feet_clearance = 1.2
             feet_contact_number = 1.5
             # gait
-            feet_air_time = 1.5 
+            feet_air_time = 1.5
             foot_slip = -0.05
             feet_distance = 0.2
             knee_distance = 0.2
