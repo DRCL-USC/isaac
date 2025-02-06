@@ -162,6 +162,9 @@ class LeggedRobotManip(BaseTask):
         self.last_dof_vel[:] = self.dof_vel[:]
         self.last_root_vel[:] = self.root_states[self.robot_actor_idxs, 7:13]
 
+        # self.feet_pos = self.rigid_body_states.view(self.num_envs, self.num_bodies, 13)[:, self.feet_indices, 0:3]
+        # self.feet_vel = self.rigid_body_states.view(self.num_envs, self.num_bodies, 13)[:, self.feet_indices, 7:10]
+
         # if self.viewer and self.enable_viewer_sync and self.debug_viz:
         #     self._draw_debug_vis()
 
@@ -241,7 +244,7 @@ class LeggedRobotManip(BaseTask):
             self._update_terrain_curriculum(env_ids)
 
         # reset robot states
-        self._resample_commands(env_ids)
+        # self._resample_commands(env_ids)
         # self._randomize_dof_props(env_ids, self.cfg)
         # if self.cfg.domain_rand.randomize_rigids_after_start:
         self._randomize_rigid_body_props(env_ids, self.cfg)
@@ -314,7 +317,6 @@ class LeggedRobotManip(BaseTask):
             adds each terms to the episode sums and to the total reward
         """
         self.rew_buf[:] = 0.
-
         for i in range(len(self.reward_functions)):
             name = self.reward_names[i]
             rew = self.reward_functions[i]() * self.reward_scales[name]
@@ -447,11 +449,21 @@ class LeggedRobotManip(BaseTask):
             self.dof_pos_limits = torch.zeros(self.num_dof, 2, dtype=torch.float, device=self.device, requires_grad=False)
             self.dof_vel_limits = torch.zeros(self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
             self.torque_limits = torch.zeros(self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
+            # for i in range(len(props)):
+            #     self.dof_pos_limits[i, 0] = props["lower"][i].item() * self.cfg.safety.pos_limit
+            #     self.dof_pos_limits[i, 1] = props["upper"][i].item() * self.cfg.safety.pos_limit
+            #     self.dof_vel_limits[i] = props["velocity"][i].item() * self.cfg.safety.vel_limit
+            #     self.torque_limits[i] = props["effort"][i].item() * self.cfg.safety.torque_limit
             for i in range(len(props)):
-                self.dof_pos_limits[i, 0] = props["lower"][i].item() * self.cfg.safety.pos_limit
-                self.dof_pos_limits[i, 1] = props["upper"][i].item() * self.cfg.safety.pos_limit
-                self.dof_vel_limits[i] = props["velocity"][i].item() * self.cfg.safety.vel_limit
-                self.torque_limits[i] = props["effort"][i].item() * self.cfg.safety.torque_limit
+                self.dof_pos_limits[i, 0] = props["lower"][i].item()
+                self.dof_pos_limits[i, 1] = props["upper"][i].item()
+                self.dof_vel_limits[i] = props["velocity"][i].item()
+                self.torque_limits[i] = props["effort"][i].item()
+                # soft limits
+                m = (self.dof_pos_limits[i, 0] + self.dof_pos_limits[i, 1]) / 2
+                r = self.dof_pos_limits[i, 1] - self.dof_pos_limits[i, 0]
+                self.dof_pos_limits[i, 0] = m - 0.5 * r * self.cfg.rewards.soft_dof_pos_limit
+                self.dof_pos_limits[i, 1] = m + 0.5 * r * self.cfg.rewards.soft_dof_pos_limit
         return props
 
     def _randomize_rigid_body_props(self, env_ids, cfg):
@@ -521,12 +533,15 @@ class LeggedRobotManip(BaseTask):
         sample_interval = int(self.cfg.commands.resampling_time / self.dt)
         env_ids = (self.episode_length_buf % sample_interval == 0).nonzero(as_tuple=False).flatten()
 
-        self._resample_commands(env_ids)
+        # self._resample_commands(env_ids)
 
     def _resample_commands(self, env_ids):
 
         self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        # self.commands[env_ids, 0] = torch.zeros((len(env_ids),), device=self.device)
+        # self.commands[env_ids, 1] = torch.zeros((len(env_ids),), device=self.device)
+
         if self.cfg.commands.heading_command:
             self.commands[env_ids, 3] = torch_rand_float(self.command_ranges["heading"][0], self.command_ranges["heading"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         else:
@@ -606,22 +621,26 @@ class LeggedRobotManip(BaseTask):
             # base origins
         self.root_states[object_env_ids] = self.object_init_state
         self.root_states[object_env_ids, :3] += self.env_origins[env_ids]
-        self.root_states[object_env_ids,0:3] += 2*(torch.rand(len(env_ids), 3, dtype=torch.float, device=self.device,
-                                                 requires_grad=False)-0.5) * torch.tensor(cfg.ball.init_pos_range,device=self.device,
-                                                     requires_grad=False)
-        self.root_states[object_env_ids,7:10] += 2*(torch.rand(len(env_ids), 3, dtype=torch.float, device=self.device,
-                                                     requires_grad=False)-0.5) * torch.tensor(cfg.ball.init_vel_range,device=self.device,
-                                                     requires_grad=False)
+        # self.root_states[object_env_ids,0:3] += 2*(torch.rand(len(env_ids), 3, dtype=torch.float, device=self.device,
+        #                                          requires_grad=False)-0.5) * torch.tensor(cfg.ball.init_pos_range,device=self.device,
+        #                                              requires_grad=False)
+        # self.root_states[object_env_ids,7:10] += 2*(torch.rand(len(env_ids), 3, dtype=torch.float, device=self.device,
+        #                                              requires_grad=False)-0.5) * torch.tensor(cfg.ball.init_vel_range,device=self.device,
+        #                                              requires_grad=False)
         #reset the goal of ball
-        x_min, x_max = -50.0, 50.0
-        y_min, y_max = -50.0, 50.0
+        # x_min, x_max = -50.0, 50.0
+        # y_min, y_max = -50.0, 50.0
+        #
+        # random_xyz = torch.rand(len(env_ids), 3, device=self.device)
+        # random_xyz[:, 0] = random_xyz[:, 0] * (x_max - x_min) + x_min
+        # random_xyz[:, 1] = random_xyz[:, 1] * (y_max - y_min) + y_min
+        # random_xyz[:, 2] = 0.0
+        # self.ball_goals[env_ids] = random_xyz
+        self.ball_start_point[env_ids] = self.root_states[object_env_ids,0:3]
+        forward_offset = torch.tensor([1.0, 0.0, 0.0], device=self.device)
+        self.ball_goals[env_ids] =  self.root_states[object_env_ids,0:3] + forward_offset
 
-        random_xyz = torch.rand(len(env_ids), 3, device=self.device)
-        random_xyz[:, 0] = random_xyz[:, 0] * (x_max - x_min) + x_min
-        random_xyz[:, 1] = random_xyz[:, 1] * (y_max - y_min) + y_min 
-        random_xyz[:, 2] = 0.0
-        self.ball_goals[env_ids] = random_xyz
-                                                     
+
 
         # apply reset states
         all_subject_env_ids = robot_env_ids
@@ -937,6 +956,7 @@ class LeggedRobotManip(BaseTask):
         self.ball_init_pose = gymapi.Transform()
         self.ball_init_pose.p = gymapi.Vec3(*self.object_init_state[:3])
         #show the goal of ball
+        self.ball_start_point = torch.zeros(self.num_envs, 3, dtype=torch.float, device=self.device)
         self.ball_goals = torch.zeros(self.num_envs, 3, dtype=torch.float, device=self.device)
         marker_geom = gymutil.WireframeSphereGeometry(radius=0.05, color=(1, 0, 0))
 

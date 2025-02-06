@@ -8,10 +8,10 @@ class Go1Cfg(LeggedRobotCfg):
         # change the observation dim
         frame_stack = 15
         c_frame_stack = 15
-        num_single_obs = 45
+        num_single_obs = 45+3+18
         num_observations = int(frame_stack * num_single_obs)
-        # single_num_privileged_obs = 45
-        single_num_privileged_obs = 104
+        single_num_privileged_obs = 45+6+18
+        # single_num_privileged_obs = 104
         # + 187
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
         num_actions = 12
@@ -35,7 +35,7 @@ class Go1Cfg(LeggedRobotCfg):
         # terminate_after_contacts_on = ['base', 'hip']
         terminate_after_contacts_on = ['base']
         # penalize_contacts_on = ["base", "hip"]
-        penalize_contacts_on = ['base' ,"thigh", "calf"]
+        penalize_contacts_on = ["thigh", "calf"]
         self_collisions = 1  # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
         replace_cylinder_with_capsule = False
@@ -71,7 +71,7 @@ class Go1Cfg(LeggedRobotCfg):
             height_measurements = 0.1
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.34]
+        pos = [0.0, 0.0, 0.32]
 
         default_joint_angles = {  # = target angles [rad] when action = 0.0
         'FL_hip_joint': 0.1,  # [rad]
@@ -94,27 +94,32 @@ class Go1Cfg(LeggedRobotCfg):
         asset = "ball"
         mass = 0.318
         radius = 0.0889
-        ball_init_pos = [0.0, 0.0, 0.40]
+        ball_init_pos = [0.5, 0.0, 0.20]
         ball_init_rot = [0, 0, 0, 1]
         ball_init_lin_vel = [0, 0, 0]
         ball_init_ang_vel = [0, 0, 0]
         init_pos_range = [1.0, 1.0, 0.2]
         init_vel_range = [0.5, 0.5, 0.3]
-        pos_reset_prob = 0.0002
-        vel_reset_prob = 0.0008
+        # pos_reset_prob = 0.0002
+        # vel_reset_prob = 0.0008
+        pos_reset_prob = 0.0
+        vel_reset_prob = 0.0
         pos_reset_range = [1.0, 1.0, 0.0]
         vel_reset_range = [0.3, 0.3, 0.3]
         vision_receive_prob = 0.7
 
     class control(LeggedRobotCfg.control):
         # PD Drive parameters:
-        stiffness = {'hip_joint': 20.0, 'thigh_joint': 20.0, 'calf_joint': 20.0}
-        damping = {'hip_joint': 0.5, 'thigh_joint': 0.5, 'calf_joint': 0.5}
+        # stiffness = {'hip_joint': 20.0, 'thigh_joint': 20.0, 'calf_joint': 20.0}
+        # damping = {'hip_joint': 0.5, 'thigh_joint': 0.5, 'calf_joint': 0.5}
+        stiffness = {'joint': 40.0}  # [N*m/rad]
+        damping = {'joint': 1.0}     # [N*m*s/rad]
 
         # action scale: target angle = actionScale * action + defaultAngle
         action_scale = 0.25
         # decimation: Number of control action updates @ sim DT per policy DT
-        decimation = 20  # 50hz
+        # decimation = 20  # 50hz
+        decimation = 4
 
     class sim(LeggedRobotCfg.sim):
         dt = 0.001  # 1000 Hz
@@ -172,8 +177,8 @@ class Go1Cfg(LeggedRobotCfg):
             ang_vel_yaw = [-0.5, 0.5] # min max [rad/s]
             heading = [-3.14, 3.14]
 
-    class rewards:
-        # base_height_target = 0.3
+    class rewards(LeggedRobotCfg.rewards):
+        base_height_target = 0.3
         min_dist = 0.1
         max_dist = 0.5
         # put some settings here for LLM parameter tuning
@@ -185,13 +190,13 @@ class Go1Cfg(LeggedRobotCfg):
         # tracking reward = exp(error*sigma)
         # tracking_sigma = 0.25
         # max_contact_force = 180  # Forces above this value are penalized
-        only_positive_rewards = True  # if true negative total rewards are clipped at zero (avoids early termination problems)
+        only_positive_rewards = False  # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25  # tracking reward = exp(-error^2/sigma)
-        soft_dof_pos_limit = 1.  # percentage of urdf limits, values above this limit are penalized
+        # soft_dof_pos_limit = 1.  # percentage of urdf limits, values above this limit are penalized
         soft_dof_vel_limit = 1.
         max_contact_force = 100.  # forces above this value are penalized
         soft_dof_pos_limit = 0.9
-        base_height_target = 0.25
+        # base_height_target = 0.25
 
 
 
@@ -224,9 +229,9 @@ class Go1Cfg(LeggedRobotCfg):
                 # feet_contact_number = 2.0  # Reward for maintaining correct foot contact count
                 # default_joint_pos = 1.6
                 # collision = -1
-                termination = 200.0
-                tracking_lin_vel = 1.0
-                tracking_ang_vel = 0.5
+                termination = -100.0
+                # tracking_lin_vel = 2.0
+                # tracking_ang_vel = 1
                 lin_vel_z = -2.0
                 ang_vel_xy = -0.05
                 orientation = -1.
@@ -235,12 +240,16 @@ class Go1Cfg(LeggedRobotCfg):
                 dof_acc = -2.5e-7
                 base_height = -10.
                 feet_air_time = 1.0
-                collision = -1.
+                collision = -10.
                 feet_stumble = -0.0
                 action_rate = -0.01
                 stand_still = -0.
                 dof_pos_limits = -10.0
-                default_joint_pos = 1.6
+                default_joint_pos = 1.0
+
+                dribbling_robot_ball_pos = 4.0
+                ball_target = 10.0
+                # robot_to_ball = 1.0
 
 
 
@@ -280,7 +289,7 @@ class Go1CfgPPO(LeggedRobotCfgPPO):
         policy_class_name = 'ActorCritic'
         algorithm_class_name = 'PPO'
         num_steps_per_env = 60  # per iteration
-        max_iterations = 10001  # number of policy updates
+        max_iterations = 30001  # number of policy updates
 
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.
@@ -288,6 +297,8 @@ class Go1CfgPPO(LeggedRobotCfgPPO):
         run_name = ''
         # Load and resume
         resume = False
+        # resume = True
         load_run = -1  # -1 = last run
         checkpoint = -1  # -1 = last saved model
         resume_path = None  # updated from load_run and chkpt
+        # resume_path = "/home/blacktower/code/python_code/dynamic_control_lab/isaac/logs/go1/Jan25_09-14-01_test/model_7400.pt"  # updated from load_run and chkpt

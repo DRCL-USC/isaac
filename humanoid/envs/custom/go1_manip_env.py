@@ -184,40 +184,48 @@ class Go1FreeEnv(LeggedRobotManip):
         
         diff = self.dof_pos - self.default_dof_pos
         # print(self.dof_pos - self.last_dof_pos)
-
+        contact = self.compute_robot_ball_contact_vector()
         self.privileged_obs_buf = torch.cat((
-            self.command_input, 
+            # self.command_input,
             q,    # 12D
             dq,  # 12D
             self.actions,   # 12D
             self.base_ang_vel * self.obs_scales.ang_vel,  # 3
             self.base_euler_xyz * self.obs_scales.quat,  # 3
-            # self.command_input,
-            (self.dof_pos - self.default_joint_pd_target) * self.obs_scales.dof_pos,  # 12
-            self.dof_vel * self.obs_scales.dof_vel,  # 12
-            self.actions,  # 12
-            # diff,  # 10
-            self.base_lin_vel * self.obs_scales.lin_vel,  # 3
-            self.base_ang_vel * self.obs_scales.ang_vel,  # 3
-            self.base_euler_xyz * self.obs_scales.quat,  # 3
-            # self.rigid_body_state.view(self.num_envs, -1, 13)[:, self.feet_indices,0:3],
-            # self.root_states[:, :3], # 3
-            self.root_states[:self.root_states.shape[0] // 2, :3],  # 3
-            self.rand_push_force[:, :2],  # 2
-            self.rand_push_torque,  # 3
-            self.env_frictions,  # 1
-            # self.cfg.domain_rand.action_noise, # 1
-            self.body_mass / 30.,  # 1
-            # stance_mask,  # 2
-            contact_mask,  # 2
+            self.ball_start_point, #3
+            self.ball_goals, #3
+            self.root_states[self.object_actor_idxs,0:3], #3
+            contact,
+            # # self.command_input,
+            # (self.dof_pos - self.default_joint_pd_target) * self.obs_scales.dof_pos,  # 12
+            # self.dof_vel * self.obs_scales.dof_vel,  # 12
+            # self.actions,  # 12
+            # # diff,  # 10
+            # self.base_lin_vel * self.obs_scales.lin_vel,  # 3
+            # self.base_ang_vel * self.obs_scales.ang_vel,  # 3
+            # self.base_euler_xyz * self.obs_scales.quat,  # 3
+            # # self.rigid_body_state.view(self.num_envs, -1, 13)[:, self.feet_indices,0:3],
+            # # self.root_states[:, :3], # 3
+            # self.root_states[:self.root_states.shape[0] // 2, :3],  # 3
+            # self.rand_push_force[:, :2],  # 2
+            # self.rand_push_torque,  # 3
+            # self.env_frictions,  # 1
+            # # self.cfg.domain_rand.action_noise, # 1
+            # self.body_mass / 30.,  # 1
+            # # stance_mask,  # 2
+            # contact_mask,  # 2
         ), dim=-1)
         obs_buf = torch.cat((
-            self.command_input, # 3
+            # self.projected_gravity,
+            # self.command_input, # 3
             q,    # 12D
             dq,  # 12D
             self.actions,   # 12D
             self.base_ang_vel * self.obs_scales.ang_vel,  # 3
             self.base_euler_xyz * self.obs_scales.quat,  # 3
+            self.ball_start_point, #3
+            self.ball_goals, #3
+            contact,
         ), dim=-1)
         # print(self.measured_heights.size())
         if self.cfg.terrain.measure_heights:
@@ -263,30 +271,61 @@ class Go1FreeEnv(LeggedRobotManip):
         for i in range(self.critic_history.maxlen):
             self.critic_history[i][env_ids] *= 0
 
-# ================================================ Rewards ================================================== #
+    def compute_robot_ball_contact_vector(self, threshold=0.05):
+
+        contact_flags = []
+        for i in range(self.num_bodies):
+            part_pos = self.rigid_body_state[:, i, 0:3]
+            dists = torch.norm(part_pos - self.object_pos_world_frame, dim=-1)
+            contact = (dists < threshold).float().unsqueeze(-1)
+            contact_flags.append(contact)
+        robot_contact_vector = torch.cat(contact_flags, dim=-1)
+        return robot_contact_vector
+
+
+
+    # ================================================ Rewards ================================================== #
 #     def _reward_no_fly(self):
 #         contacts = self.contact_forces[:, self.feet_indices, 2] > 0.1
 #         single_contact = torch.sum(1.*contacts, dim=1)==1
 #         return 1.*single_contact
 #
+    # def _reward_feet_contact_number(self):
+    #     """
+    #     Calculates a reward based on the number of feet contacts aligning with the gait phase.
+    #     Rewards or penalizes depending on whether the foot contact matches the expected gait phase.
+    #     """
+    #     contact = self.contact_forces[:, self.feet_indices, 2] > 1.
+    #     foot_speed_norm = torch.norm(self.rigid_state[:, self.feet_indices, 7:9], dim=2)
+    #     foot_speed_norm *= torch.norm(self.rigid_state[:, self.feet_indices, 7:9]) < 0.05
+    #     stance_mask = foot_speed_norm
+    #     diagonal_match_1 = (contact[:, 0] == contact[:, 3])
+    #     diagonal_match_2 = (contact[:, 1] == contact[:, 2])
+    #     diagonal_reward = torch.where(diagonal_match_1 & diagonal_match_2, 1.0, -0.5)
+    #
+    #
+    #     reward = torch.where(contact == stance_mask, 1, -0.3)
+    #
+    #     return torch.mean(reward, dim=1) + diagonal_reward
+
     def _reward_feet_contact_number(self):
-        """
-        Calculates a reward based on the number of feet contacts aligning with the gait phase.
-        Rewards or penalizes depending on whether the foot contact matches the expected gait phase.
-        """
+
         contact = self.contact_forces[:, self.feet_indices, 2] > 1.
+
+
         foot_speed_norm = torch.norm(self.rigid_state[:, self.feet_indices, 7:9], dim=2)
-        foot_speed_norm *= torch.norm(self.rigid_state[:, self.feet_indices, 7:9]) < 0.05
-        stance_mask = foot_speed_norm
+
+
+        stance_mask = foot_speed_norm < 0.1
+
         diagonal_match_1 = (contact[:, 0] == contact[:, 3])
         diagonal_match_2 = (contact[:, 1] == contact[:, 2])
-        diagonal_reward = torch.where(diagonal_match_1 & diagonal_match_2, 1.0, -0.5)
+        diagonal_reward = torch.where(diagonal_match_1 & diagonal_match_2, 0.5, -0.3)
 
-
-        reward = torch.where(contact == stance_mask, 1, -0.3)
-
+        reward = torch.where(contact == stance_mask, 0.5, -0.3)
         return torch.mean(reward, dim=1) + diagonal_reward
-#
+
+    #
 #     def _reward_foot_slip(self):
 #         """
 #         Calculates the reward for minimizing foot slip. The reward is based on the contact forces
@@ -360,7 +399,6 @@ class Go1FreeEnv(LeggedRobotManip):
 
     def _reward_dof_vel(self):
         # Penalize dof velocities
-        print(self.dof.vel.shape)
         return torch.sum(torch.square(self.dof_vel), dim=1)
 
     def _reward_dof_acc(self):
@@ -378,9 +416,6 @@ class Go1FreeEnv(LeggedRobotManip):
     def _reward_termination(self):
         # Terminal reward / penalty
         # distance from goal
-        # ball_pos = self.root_states[self.object_actor_idxs, 0:3]
-        # diff = ball_pos - self.ball_goals
-        # dist = torch.norm(diff, dim=-1)
         # return self.reset_buf * ~self.time_out_buf * dist
         return self.reset_buf * ~self.time_out_buf
 #
@@ -399,19 +434,19 @@ class Go1FreeEnv(LeggedRobotManip):
         # penalize torques too close to the limit
         return torch.sum((torch.abs(self.torques) - self.torque_limits*self.cfg.rewards.soft_torque_limit).clip(min=0.), dim=1)
 
-    def _reward_tracking_lin_vel(self):
-        # Tracking of linear velocity commands (xy axes)
-        lin_vel_error = torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1)
-        # print(self.commands[:, :2])
-        # print(self.base_lin_vel[:, :2])
-        # print(lin_vel_error)
-        # print(torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma))
-        return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)
+    # def _reward_tracking_lin_vel(self):
+    #     # Tracking of linear velocity commands (xy axes)
+    #     lin_vel_error = torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1)
+    #     # print(self.commands[:, :2])
+    #     # print(self.base_lin_vel[:, :2])
+    #     # print(lin_vel_error)
+    #     # print(torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma))
+    #     return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)
 
-    def _reward_tracking_ang_vel(self):
-        # Tracking of angular velocity commands (yaw)
-        ang_vel_error = torch.square(self.commands[:, 2] - self.base_ang_vel[:, 2])
-        return torch.exp(-ang_vel_error/self.cfg.rewards.tracking_sigma)
+    # def _reward_tracking_ang_vel(self):
+    #     # Tracking of angular velocity commands (yaw)
+    #     ang_vel_error = torch.square(self.commands[:, 2] - self.base_ang_vel[:, 2])
+    #     return torch.exp(-ang_vel_error/self.cfg.rewards.tracking_sigma)
 
     # def _reward_feet_air_time(self):
     #     # Reward long steps
@@ -439,7 +474,7 @@ class Go1FreeEnv(LeggedRobotManip):
         self.feet_air_time += self.dt
         rew_airTime = torch.sum((self.feet_air_time - 0.5) * first_contact,
                                 dim=1)  # reward only on first contact with the ground
-        rew_airTime *= torch.norm(self.commands[:, :2], dim=1) > 0.1  # no reward for zero command
+        # rew_airTime *= torch.norm(self.commands[:, :2], dim=1) > 0.1  # no reward for zero command
         self.feet_air_time *= ~contact_filt
         return rew_airTime
 #
@@ -448,10 +483,57 @@ class Go1FreeEnv(LeggedRobotManip):
         return torch.any(torch.norm(self.contact_forces[:, self.feet_indices, :2], dim=2) >\
              5 *torch.abs(self.contact_forces[:, self.feet_indices, 2]), dim=1)
 
-    def _reward_stand_still(self):
-        # Penalize motion at zero commands
-        return torch.sum(torch.abs(self.dof_pos - self.default_dof_pos), dim=1) * (torch.norm(self.commands[:, :2], dim=1) < 0.1)
+    # def _reward_stand_still(self):
+    #     # Penalize motion at zero commands
+    #     return torch.sum(torch.abs(self.dof_pos - self.default_dof_pos), dim=1) * (torch.norm(self.commands[:, :2], dim=1) < 0.1)
 
     def _reward_feet_contact_forces(self):
         # penalize high contact forces
         return torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  self.cfg.rewards.max_contact_force).clip(min=0.), dim=1)
+
+    # def _reward_ball_target(self):
+    #     ball_pos = self.root_states[self.object_actor_idxs, 0:3]
+    #     diff = ball_pos - self.ball_goals
+    #     dist = torch.norm(diff, dim=-1)
+    #     # max_dist = self.cfg.rewards.max_ball_goal_distance  # 设定的最大距离
+    #     max_dist = 1.0
+    #     normalized_reward = torch.clamp(1 - (dist / max_dist), 0, 1)
+    #
+    #     return normalized_reward
+
+    def _reward_ball_target(self):
+        """
+        Reward for making the ball reach and stop at its target.
+        Encourages the ball to minimize distance to the goal and reduce velocity.
+        """
+        ball_pos = self.root_states[self.object_actor_idxs, 0:3]
+        ball_vel = self.root_states[self.object_actor_idxs, 7:10]
+        dist = torch.norm(ball_pos - self.ball_goals, dim=-1)
+
+        speed = torch.norm(ball_vel, dim=-1)
+
+        max_dist = 0.1
+        dist_reward = torch.clamp(1 - (dist / max_dist), -1, 1)
+
+        vel_threshold = 0.1
+        speed_reward = torch.exp(-speed / vel_threshold)
+
+        total_reward = dist_reward * speed_reward
+
+        return total_reward
+
+    def _reward_dribbling_robot_ball_pos(self):
+
+        FR_shoulder_idx = self.gym.find_actor_rigid_body_handle(self.envs[0], self.robot_actor_handles[0],
+                                                                    "FR_thigh_shoulder")
+        FR_HIP_positions = quat_rotate_inverse(self.base_quat,
+                                               self.rigid_body_state.view(self.num_envs, -1, 13)[:,
+                                               FR_shoulder_idx, 0:3].view(self.num_envs, 3) - self.base_pos)
+
+        delta_dribbling_robot_ball_pos = 4.0
+        rew_dribbling_robot_ball_pos = torch.exp(-delta_dribbling_robot_ball_pos * torch.pow(
+            torch.norm(self.object_local_pos - FR_HIP_positions, dim=-1), 2))
+        return rew_dribbling_robot_ball_pos
+
+
+

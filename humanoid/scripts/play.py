@@ -133,7 +133,7 @@ def play(args):
         actions = policy(obs.detach())
         
         if FIX_COMMAND:
-            env.commands[:, 0] = -0.  # 1.0
+            env.commands[:, 0] = 0.  # 1.0
             env.commands[:, 1] = 0.
             env.commands[:, 2] = 0.
             env.commands[:, 3] = 0.
@@ -146,11 +146,12 @@ def play(args):
         #     # env.commands[:, 1] = 0.3
 
 
-        if i > 800:
-            env.commands[:, 2] = 0.
+        # if i > 800:
+        #     env.commands[:, 2] = 0.
             # env.commands[:, 2] = 0.5
         # print(env.contact_forces[robot_index, env.feet_indices, 2])
         obs, critic_obs, rews, dones, infos = env.step(actions.detach())
+
         if RENDER:
             env.gym.fetch_results(env.sim, True)
             env.gym.step_graphics(env.sim)
@@ -158,7 +159,7 @@ def play(args):
 
             #draw the goal of ball
             marker_geom = gymutil.WireframeSphereGeometry(
-                radius=1.0,
+                radius=0.1,
                 color=(1, 0, 0)
             )
 
@@ -209,6 +210,6 @@ def play(args):
 if __name__ == '__main__':
     EXPORT_POLICY = True
     RENDER = True
-    FIX_COMMAND = False
+    FIX_COMMAND = True
     args = get_args()
     play(args)
