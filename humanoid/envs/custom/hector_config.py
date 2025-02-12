@@ -87,7 +87,7 @@ class HectorCfg(LeggedRobotCfg):
     class control(LeggedRobotCfg.control):
         # PD Drive parameters:
         stiffness = {'hip_joint': 50.0, 'hip_roll': 50.0, 'thigh': 80.0,
-                     'calf': 80.0, 'toe': 10.0}
+                     'calf': 80.0, 'toe': 8.0}
         damping = {'hip_joint': 2.0, 'hip_roll': 2.0, 'thigh': 2.0,
                    'calf': 2.0, 'toe': 2.0}
 
@@ -123,11 +123,11 @@ class HectorCfg(LeggedRobotCfg):
         added_base_mass_range = [-3.0, 4.0]
 
         randomize_base_com = True
-        added_base_com_range = [-0.1, 0.1]
+        added_base_com_range = [-0.12, 0.12]
 
         randomize_pd_gains = True
-        stiffness_multiplier_range = [0.7, 1.2]  
-        damping_multiplier_range = [0.8, 1.2]   
+        stiffness_multiplier_range = [0.5, 2.0]  
+        damping_multiplier_range = [0.7, 1.2]   
 
         randomize_link_mass = True
         multiplied_link_mass_range = [0.8, 1.2]
@@ -136,10 +136,10 @@ class HectorCfg(LeggedRobotCfg):
         motor_zero_offset_range = [-0.035, 0.035] # Offset to add to the motor angles
 
         randomize_calculated_torque = True
-        torque_multiplier_range = [0.7, 1.4]
+        torque_multiplier_range = [0.6, 1.4]
 
         randomize_joint_friction = True
-        joint_friction_range = [0.01, 1.4]
+        joint_friction_range = [0.05, 1.5]
 
         randomize_joint_damping = True
         joint_damping_range = [0.3, 1.5]
@@ -150,7 +150,7 @@ class HectorCfg(LeggedRobotCfg):
         push_robots = True
         push_interval_s = 4
         max_push_vel_xy = 0.5
-        max_push_ang_vel = 0.8
+        max_push_ang_vel = 1.0
         # dynamic randomization
         action_delay = 0.0
         action_noise = 0.08
@@ -173,7 +173,7 @@ class HectorCfg(LeggedRobotCfg):
         heading_command = True  # if true: compute ang vel command from heading error
 
         class ranges:
-            lin_vel_x = [-0.8, 0.8]   # min max [m/s]
+            lin_vel_x = [-0.5, 1.2]   # min max [m/s]
             lin_vel_y = [-0.4, 0.4]   # min max [m/s]
             ang_vel_yaw = [-1.5, 1.5] # min max [rad/s]
             heading = [-3.14, 3.14]
@@ -184,8 +184,8 @@ class HectorCfg(LeggedRobotCfg):
         max_dist = 0.5
         # put some settings here for LLM parameter tuning
         target_joint_pos_scale = 0.17    # rad
-        target_feet_height = 0.06        # m
-        cycle_time = 0.8                # sec
+        target_feet_height = 0.07        # m
+        cycle_time = 0.8               # sec
         # if true negative total rewards are clipped at zero (avoids early termination problems)
         only_positive_rewards = False
         # tracking reward = exp(error*sigma)
@@ -197,22 +197,22 @@ class HectorCfg(LeggedRobotCfg):
             default_joint_pos = 1.8
             feet_contact_number = 2.5
             foot_slip = -0.2
-            feet_clearance = 0.2
+            feet_clearance = 0.1
             tracking_lin_vel = 2.5
             tracking_ang_vel = 1.8
-            ang_vel_xy = -0.8
+            ang_vel_xy = -0.5
             torques = -1.e-10
             dof_acc = -5.e-9
             lin_vel_z = -2.5
-            feet_air_time = 80.
+            feet_air_time = 100.
             orientation = -1.0
             dof_pos_limits = -0.5
             base_height = -10.0
             no_fly = 0.0
-            dof_vel = -5.e-5
+            dof_vel = -9.e-5
             feet_contact_forces = -0.02
 
-            action_rate = -0.05
+            action_rate = -0.08
 
     class normalization:
         class obs_scales:
@@ -250,7 +250,7 @@ class HectorCfgPPO(LeggedRobotCfgPPO):
         policy_class_name = 'ActorCritic'
         algorithm_class_name = 'PPO'
         num_steps_per_env = 60  # per iteration
-        max_iterations = 5001  # number of policy updates
+        max_iterations = 10001  # number of policy updates
 
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.

@@ -44,12 +44,13 @@ from isaacgym.torch_utils import *
 import torch
 from tqdm import tqdm
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
     env_cfg.env.num_envs = min(env_cfg.env.num_envs, 1)
-    env_cfg.sim.max_gpu_contact_pairs = 2**23
+    env_cfg.sim.max_gpu_contact_pairs = 2**24
     # env_cfg.terrain.mesh_type = 'trimesh'
     # env_cfg.terrain.terrain_proportions = [0.1, 0.1, 0.4, 0.1, 0.1, 0.1, 0.1]
     env_cfg.terrain.mesh_type = 'plane'
@@ -93,20 +94,20 @@ def play(args):
         do_constant_folding=True,
         input_names=['obs'],
         output_names=['action'],
-        dynamic_axes={'input': {0: '585'}, 'output': {0: '10'}})
+        dynamic_axes={'input': {0: '675'}, 'output': {0: '12'}})
 
 
-
+    torques = []
     logger = Logger(env.dt)
     robot_index = -1 # which robot is used for logging
-    joint_index = 4 # which joint is used for logging
+    joint_index = 3 # which joint is used for logging
     stop_state_log = 1200 # number of steps before plotting states
     if RENDER:
         camera_properties = gymapi.CameraProperties()
         camera_properties.width = 1920
         camera_properties.height = 1080
         h1 = env.gym.create_camera_sensor(env.envs[0], camera_properties)
-        camera_offset = gymapi.Vec3(1, -1, 0.5)
+        camera_offset = gymapi.Vec3(1, -1, 0.8)
         camera_rotation = gymapi.Quat.from_axis_angle(gymapi.Vec3(-0.3, 0.2, 1),
                                                     np.deg2rad(135))
         actor_handle = env.gym.get_actor_handle(env.envs[0], 0)
@@ -129,7 +130,7 @@ def play(args):
     for i in tqdm(range(stop_state_log)):
 
         actions = policy(obs.detach()) #* 0.
-        
+        # print(actions)
         if FIX_COMMAND:
             env.commands[:, 0] = -0.  # 1.0
             env.commands[:, 1] = 0.
@@ -137,7 +138,7 @@ def play(args):
             env.commands[:, 3] = 0.
         
         if i > 200:
-            env.commands[:, 0] = 0.3
+            env.commands[:, 0] = 1
 
         # if i > 400:
         #     env.commands[:, 0] = 0.
@@ -147,8 +148,8 @@ def play(args):
         if i > 800:
             env.commands[:, 2] = 0.
             # env.commands[:, 2] = 0.5
-        # print(env.contact_forces[robot_index, env.feet_indices, 2])
-
+        # print(env.torques[robot_index, joint_index].item())
+        torques.append(env.torques[robot_index, joint_index].item())
         obs, critic_obs, rews, dones, infos = env.step(actions.detach())
         if RENDER:
             env.gym.fetch_results(env.sim, True)
@@ -163,7 +164,7 @@ def play(args):
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
             video.write(img[..., :3])
 
-        # print(env.dof_pos[robot_index, joint_index].item())
+        # print(env.dof_vel[robot_index])
         # print(())
         logger.log_states(
             {
@@ -190,12 +191,14 @@ def play(args):
     logger.print_rewards()
     logger.plot_states()
     
+    # fig, ax = plt.subplots()
+    ax.plot(torques)
     if RENDER:
         video.release()
 
 if __name__ == '__main__':
     EXPORT_POLICY = True
     RENDER = True
-    FIX_COMMAND = True
+    FIX_COMMAND = False
     args = get_args()
     play(args)

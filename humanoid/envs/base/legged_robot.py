@@ -403,7 +403,11 @@ class LeggedRobot(BaseTask):
         actions_scaled = actions * self.cfg.control.action_scale
         p_gains = self.p_gains * self.p_gains_multiplier
         d_gains = self.d_gains * self.d_gains_multiplier
-        torques = p_gains * (actions_scaled + self.default_dof_pos - self.dof_pos + self.motor_zero_offsets) - d_gains * (self.dof_pos - self.last_dof_pos)/self.dt
+        torques = p_gains * (actions_scaled + self.default_dof_pos - self.dof_pos + self.motor_zero_offsets) - d_gains * self.dof_vel
+        # (self.dof_pos - self.last_dof_pos)/self.dt
+
+        # print(self.dof_pos)
+        # print(self.dof_vel)
         # self.dof_vel
 
         torques *= self.torque_multiplier

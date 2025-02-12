@@ -329,6 +329,8 @@ class HectorFreeEnv(LeggedRobot):
         on penalizing deviation in yaw and roll directions. Excludes yaw and roll from the main penalty.
         """
         joint_diff = self.dof_pos - self.default_joint_pd_target
+        joint_diff[:, 4] *= 0.1
+        joint_diff[:, 9] *= 0.1
         left_yaw_roll = joint_diff[:, :2]
         right_yaw_roll = joint_diff[:,5:7]
         yaw_roll = torch.norm(left_yaw_roll, dim=1) + torch.norm(right_yaw_roll, dim=1)
