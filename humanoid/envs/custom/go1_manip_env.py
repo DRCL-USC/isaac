@@ -535,5 +535,17 @@ class Go1FreeEnv(LeggedRobotManip):
             torch.norm(self.object_local_pos - FR_HIP_positions, dim=-1), 2))
         return rew_dribbling_robot_ball_pos
 
+    def _reward_dof_pos(self):
+        # Penalize dof positions
+        # k_q = -0.75
+        return torch.sum(torch.square(self.dof_pos - self.default_dof_pos), dim=1)
+
+    def _reward_position_command_error_tanh(self):
+        ball_pos = self.root_states[self.object_actor_idxs, 0:3]
+        dist = torch.norm(ball_pos - self.ball_goals, dim=-1)
+        return 1- torch.tanh(dist)
+
+
+
 
 

@@ -33,7 +33,7 @@ class Go1Cfg(LeggedRobotCfg):
         knee_name = "calf"
 
         # terminate_after_contacts_on = ['base', 'hip']
-        terminate_after_contacts_on = ['base']
+        terminate_after_contacts_on = ['base',"hip"]
         # penalize_contacts_on = ["base", "hip"]
         penalize_contacts_on = ["thigh", "calf"]
         self_collisions = 1  # 1 to disable, 0 to enable...bitwise filter
@@ -110,10 +110,10 @@ class Go1Cfg(LeggedRobotCfg):
 
     class control(LeggedRobotCfg.control):
         # PD Drive parameters:
-        # stiffness = {'hip_joint': 20.0, 'thigh_joint': 20.0, 'calf_joint': 20.0}
-        # damping = {'hip_joint': 0.5, 'thigh_joint': 0.5, 'calf_joint': 0.5}
-        stiffness = {'joint': 40.0}  # [N*m/rad]
-        damping = {'joint': 1.0}     # [N*m*s/rad]
+        stiffness = {'hip_joint': 20.0, 'thigh_joint': 20.0, 'calf_joint': 20.0}
+        damping = {'hip_joint': 0.5, 'thigh_joint': 0.5, 'calf_joint': 0.5}
+        # stiffness = {'joint': 40.0}  # [N*m/rad]
+        # damping = {'joint': 1.0}     # [N*m*s/rad]
 
         # action scale: target angle = actionScale * action + defaultAngle
         action_scale = 0.25
@@ -229,7 +229,7 @@ class Go1Cfg(LeggedRobotCfg):
                 # feet_contact_number = 2.0  # Reward for maintaining correct foot contact count
                 # default_joint_pos = 1.6
                 # collision = -1
-                termination = -100.0
+                termination = -10.0
                 # tracking_lin_vel = 2.0
                 # tracking_ang_vel = 1
                 lin_vel_z = -2.0
@@ -238,17 +238,20 @@ class Go1Cfg(LeggedRobotCfg):
                 torques = -0.0002
                 dof_vel = -2.e-4
                 dof_acc = -2.5e-7
-                base_height = -10.
-                feet_air_time = 1.0
-                collision = -10.
-                feet_stumble = -0.0
-                action_rate = -0.01
-                stand_still = -0.
-                dof_pos_limits = -10.0
-                default_joint_pos = 1.0
+                base_height = -1.
+                feet_air_time = 10.0
+                collision = -1.
+                # feet_stumble = -0.0
+                action_rate = -0.01 #-0.01
+                # stand_still = -0.
+                # dof_pos_limits = -10.0
+                # default_joint_pos = 1.0
+
 
                 dribbling_robot_ball_pos = 4.0
-                ball_target = 10.0
+                position_command_error_tanh = 5
+                # ball_target = 10.0
+                dof_pos = -0.075
                 # robot_to_ball = 1.0
 
 

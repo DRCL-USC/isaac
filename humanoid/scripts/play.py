@@ -45,6 +45,8 @@ from isaacgym.torch_utils import *
 import torch
 from tqdm import tqdm
 from datetime import datetime
+import pandas as pd
+# import ace_tools as tools
 
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
@@ -67,6 +69,7 @@ def play(args):
 
     train_cfg.seed = 123145
     print("train_cfg.runner_class_name:", train_cfg.runner_class_name)
+    reward_data = []
 
     # prepare environment
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
@@ -107,7 +110,8 @@ def play(args):
         camera_properties.width = 1920
         camera_properties.height = 1080
         h1 = env.gym.create_camera_sensor(env.envs[0], camera_properties)
-        camera_offset = gymapi.Vec3(1, -1, 0.5)
+        # camera_offset = gymapi.Vec3(1, -1, 0.1)
+        camera_offset = gymapi.Vec3(4, -1, 2.5)
         camera_rotation = gymapi.Quat.from_axis_angle(gymapi.Vec3(-0.3, 0.2, 1),
                                                     np.deg2rad(135))
         actor_handle = env.gym.get_actor_handle(env.envs[0], 0)
@@ -151,6 +155,10 @@ def play(args):
             # env.commands[:, 2] = 0.5
         # print(env.contact_forces[robot_index, env.feet_indices, 2])
         obs, critic_obs, rews, dones, infos = env.step(actions.detach())
+        reward_dict = {key: value.item() for key, value in infos['episode'].items()}
+        # print(reward_dict)
+        reward_dict["step"] = i
+        reward_data.append(reward_dict)
 
         if RENDER:
             env.gym.fetch_results(env.sim, True)
@@ -203,6 +211,11 @@ def play(args):
 
     logger.print_rewards()
     logger.plot_states()
+
+    df_rewards = pd.DataFrame(reward_data)
+    csv_path = "reward_data.csv"
+    df_rewards.to_csv(csv_path, index=False)
+
     
     if RENDER:
         video.release()
