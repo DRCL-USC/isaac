@@ -233,7 +233,7 @@ class Go2wFreeEnv(LeggedRobot):
                 self.rand_push_force[:, :2],  # 2
                 self.rand_push_torque,  # 3
                 self.env_frictions,  # 1
-                self.body_mass / 30.,  # 1
+                self.body_mass,  # 1
                 # stance_mask,  # 2
                 contact_mask,
                 self._get_heights()), dim=-1)
@@ -321,11 +321,13 @@ class Go2wFreeEnv(LeggedRobot):
         on penalizing deviation in yaw and roll directions. Excludes yaw and roll from the main penalty.
         """
         joint_diff = self.dof_pos - self.default_joint_pd_target
-        left_yaw_roll = joint_diff[:, :3]
-        right_yaw_roll = joint_diff[:,5:7]
-        yaw_roll = torch.norm(left_yaw_roll, dim=1) + torch.norm(right_yaw_roll, dim=1)
-        yaw_roll = torch.clamp(yaw_roll - 0.1, 0, 50)
-        return -0.1 * torch.norm(joint_diff, dim=1)
+        joint_diff[:,3] = 0
+        joint_diff[:,7] = 0
+        joint_diff[:,11] = 0
+        joint_diff[:,15] = 0
+        # yaw_roll = torch.norm(left_yaw_roll, dim=1) + torch.norm(right_yaw_roll, dim=1)
+        # yaw_roll = torch.clamp(yaw_roll - 0.1, 0, 50)
+        return -0.5 * torch.norm(joint_diff, dim=1)
 
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity

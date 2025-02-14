@@ -405,7 +405,7 @@ Stephen Brawner (brawner@gmail.com)
   </link>
   <joint
     name="FL_foot_joint"
-    type="continuous">
+    type="revolute">
     <origin
       xyz="0 0 -0.2264"
       rpy="0 0 0" />
@@ -709,7 +709,7 @@ Stephen Brawner (brawner@gmail.com)
   </link>
   <joint
     name="FR_foot_joint"
-    type="continuous">
+    type="revolute">
     <origin
       xyz="0 0 -0.2264"
       rpy="0 0 0" />
@@ -1013,7 +1013,7 @@ Stephen Brawner (brawner@gmail.com)
   </link>
   <joint
     name="RL_foot_joint"
-    type="continuous">
+    type="revolute">
     <origin
       xyz="0.0 0 -0.2264"
       rpy="0 0 0" />
@@ -1316,7 +1316,7 @@ Stephen Brawner (brawner@gmail.com)
   </link>
   <joint
     name="RR_foot_joint"
-    type="continuous">
+    type="revolute">
     <origin
       xyz="-0.0 0 -0.2264"
       rpy="0 0 0" />

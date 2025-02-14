@@ -32,11 +32,11 @@ class Go2wCfg(LeggedRobotCfg):
         foot_name = "foot"
         knee_name = "calf"
 
-        terminate_after_contacts_on = ['base', 'thigh', 'hip', 'calf']
+        terminate_after_contacts_on = ['base', 'thigh', 'hip', 'calf', 'Head_lower']
         # terminate_after_contacts_on = ['base']
         # penalize_contacts_on = ["base", "thigh"]
         penalize_contacts_on = ["thigh", "calf"]
-        self_collisions = 1  # 1 to disable, 0 to enable...bitwise filter
+        self_collisions = 0  # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = True
         replace_cylinder_with_capsule = False
         fix_base_link = False
@@ -79,9 +79,9 @@ class Go2wCfg(LeggedRobotCfg):
             'FR_hip_joint': -0.,
             'RR_hip_joint': -0.,
 
-            'FL_thigh_joint': 0.8,
+            'FL_thigh_joint': 1.,
             'RL_thigh_joint': 1.,
-            'FR_thigh_joint': 0.8,
+            'FR_thigh_joint': 1.,
             'RR_thigh_joint': 1.,
 
             'FL_calf_joint': -1.5,
@@ -97,8 +97,8 @@ class Go2wCfg(LeggedRobotCfg):
 
     class control(LeggedRobotCfg.control):
         # PD Drive parameters:
-        stiffness = {'hip_joint': 30, "thigh_joint": 30, "calf_joint": 30, "foot_joint": 0}
-        damping = {'hip_joint': 2, "thigh_joint": 2, "calf_joint": 2, "foot_joint": 1}
+        stiffness = {'hip_joint': 50, "thigh_joint": 50, "calf_joint": 50, "foot_joint": 0}
+        damping = {'hip_joint': 2, "thigh_joint": 2, "calf_joint": 2, "foot_joint": 0.5}
 
         # action scale: target angle = actionScale * action + defaultAngle
         action_scale = 0.25
@@ -115,18 +115,18 @@ class Go2wCfg(LeggedRobotCfg):
             solver_type = 1  # 0: pgs, 1: tgs
             num_position_iterations = 4
             num_velocity_iterations = 0
-            contact_offset = 0.01  # [m]
+            contact_offset = 0.02  # [m]
             rest_offset = 0.0   # [m]
             bounce_threshold_velocity = 0.5  # [m/s]
             max_depenetration_velocity = 1.0
-            max_gpu_contact_pairs = 2**24  # 2**24 -> needed for 8000 envs and more
+            max_gpu_contact_pairs = 2**23  # 2**24 -> needed for 8000 envs and more
             default_buffer_size_multiplier = 5
             # 0: never, 1: last sub-step, 2: all sub-steps (default=2)
             contact_collection = 2
 
     class domain_rand:
         randomize_friction = True
-        friction_range = [0.3, 1.2]
+        friction_range = [0.5, 1.2]
         randomize_base_mass = True
         added_mass_range = [-2., 4.]
         push_robots = True
@@ -145,7 +145,7 @@ class Go2wCfg(LeggedRobotCfg):
         heading_command = True  # if true: compute ang vel command from heading error
 
         class ranges:
-            lin_vel_x = [-1.5, 1.5]   # min max [m/s]
+            lin_vel_x = [-1.0, 2.5]   # min max [m/s]
             lin_vel_y = [-0.5, 0.5]   # min max [m/s]
             ang_vel_yaw = [-1.5, 1.5] # min max [rad/s]
             heading = [-3.14, 3.14]
@@ -166,24 +166,24 @@ class Go2wCfg(LeggedRobotCfg):
 
         class scales:
             termination = -200.
-            default_joint_pos = 0.0
+            default_joint_pos = 2.0
             foot_slip = -0.
             feet_clearance = 0.0
-            tracking_lin_vel = 1.5
-            tracking_ang_vel = 0.8
+            tracking_lin_vel = 4.5
+            tracking_ang_vel = 3.8
             ang_vel_xy = -0.8
-            torques = -8.e-9
-            dof_acc = -5.e-8
-            lin_vel_z = -1.5
-            feet_air_time = 20.
+            torques = -8.e-10
+            dof_acc = -5.e-9
+            lin_vel_z = -2.5
+            feet_air_time = 1.
             orientation = -1.0
             dof_pos_limits = -1.
-            base_height = -3.0
+            base_height = -5.0
             no_fly = 0.0
-            dof_vel = -2.e-8
+            dof_vel = -2.e-10
             feet_contact_forces = -0.01
 
-            action_rate = -0.05
+            action_rate = -0.01
 
     class normalization:
         class obs_scales:

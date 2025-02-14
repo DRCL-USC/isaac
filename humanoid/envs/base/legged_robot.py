@@ -356,8 +356,12 @@ class LeggedRobot(BaseTask):
         actions_scaled = actions * self.cfg.control.action_scale
         p_gains = self.p_gains
         d_gains = self.d_gains
+        # print(d_gains[:, 2])
         torques = p_gains * (actions_scaled + self.default_dof_pos - self.dof_pos) - d_gains * self.dof_vel
-
+        torques[:,3] = d_gains[:,3] * (actions[:,3] - self.dof_vel[:,3])# actions_scaled[:,3]
+        torques[:,7] = d_gains[:,7] * (actions[:,7] - self.dof_vel[:,7])#actions_scaled[:,7]
+        torques[:,11] = d_gains[:,11] * (actions[:,11] - self.dof_vel[:,11]) #actions_scaled[:,11]
+        torques[:,15] = d_gains[:,15] * (actions[:,15] - self.dof_vel[:,15]) #actions_scaled[:,15]
         # torques *= self.motor_strength
         return torch.clip(torques, -self.torque_limits, self.torque_limits)
 

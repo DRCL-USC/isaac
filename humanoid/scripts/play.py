@@ -103,8 +103,8 @@ def play(args):
 
 
     logger = Logger(env.dt)
-    robot_index = -1 # which robot is used for logging
-    joint_index = 9 # which joint is used for logging
+    robot_index = 0 # which robot is used for logging
+    joint_index = 3 # which joint is used for logging
     stop_state_log = 1200 # number of steps before plotting states
     if RENDER:
         camera_properties = gymapi.CameraProperties()
@@ -133,7 +133,7 @@ def play(args):
 
     for i in tqdm(range(stop_state_log)):
 
-        actions = policy(obs.detach()) # * 0.
+        actions = policy(obs.detach())  #* 0.
 
         if FIX_COMMAND:
             env.commands[:, 0] = -0.  # 1.0
@@ -141,8 +141,8 @@ def play(args):
             env.commands[:, 2] = 0.
             env.commands[:, 3] = 0.
 
-        # if i > 200:
-            # env.commands[:, 0] = 0.5
+        if i > 200:
+            env.commands[:, 0] = 1.8
 
         # if i > 400:
         #     env.commands[:, 0] = 0.
@@ -150,7 +150,7 @@ def play(args):
 
 
         if i > 800:
-            env.commands[:, 2] = 0.
+            env.commands[:, 0] = 0.
             # env.commands[:, 2] = 0.5
         # print(env.contact_forces[robot_index, env.feet_indices, 2])
 
@@ -168,7 +168,7 @@ def play(args):
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
             video.write(img[..., :3])
 
-        # print(env.dof_pos[robot_index, joint_index].item())
+        # print(env.dof_vel[robot_index])
         # print(env.dof_vel[robot_index, joint_index].item())
         logger.log_states(
             {
@@ -199,8 +199,8 @@ def play(args):
         video.release()
 
 if __name__ == '__main__':
-    EXPORT_POLICY = True
+    EXPORT_POLICY = False
     RENDER = True
-    FIX_COMMAND = False
+    FIX_COMMAND = True
     args = get_args()
     play(args)
