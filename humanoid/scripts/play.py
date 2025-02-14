@@ -141,12 +141,12 @@ def play(args):
             env.commands[:, 0] = 1
 
         # if i > 400:
-        #     env.commands[:, 0] = 0.
-        #     # env.commands[:, 1] = 0.3
+            # env.commands[:, 0] = 0.
+            # env.commands[:, 1] = 0.4
 
 
         if i > 800:
-            env.commands[:, 2] = 0.
+            env.commands[:, 2] = 0.8
             # env.commands[:, 2] = 0.5
         # print(env.torques[robot_index, joint_index].item())
         torques.append(env.torques[robot_index, joint_index].item())
@@ -199,6 +199,6 @@ def play(args):
 if __name__ == '__main__':
     EXPORT_POLICY = True
     RENDER = True
-    FIX_COMMAND = False
+    FIX_COMMAND = True
     args = get_args()
     play(args)
