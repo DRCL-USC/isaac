@@ -7,6 +7,8 @@ import torch
 from humanoid.envs import LeggedRobot
 
 from humanoid.utils.terrain import  HumanoidTerrain
+from humanoid.envs.custom.motions.motion_loader import MotionLoader
+
 
 
 class G1FreeEnv(LeggedRobot):
@@ -49,6 +51,9 @@ class G1FreeEnv(LeggedRobot):
         self.feet_height = torch.zeros((self.num_envs, 2), device=self.device)
         self.reset_idx(torch.tensor(range(self.num_envs), device=self.device))
         self.compute_observations()
+        self._motion_loader = MotionLoader(motion_file=cfg.env.motion_file, device=self.device)
+        self.demo_time = torch.zeros(self.num_envs, device=self.device)
+        # self.demo_dof_pos = None
 
     def _push_robots(self):
         """ Random pushes the robots. Emulates an impulse by setting a randomized base velocity. 
@@ -154,19 +159,37 @@ class G1FreeEnv(LeggedRobot):
         noise_vec[42: 45] = noise_scales.quat * self.obs_scales.quat         # euler x,y
         return noise_vec
 
+    def sample_motion_data(self):
+        control_dt = 0.02
+        # control_dt = self.dt
+        self.demo_time += control_dt
+        self.demo_time = torch.where(self.demo_time > self._motion_loader.duration, torch.zeros_like(self.demo_time), self.demo_time)
+        demo_time_np = self.demo_time.cpu().numpy()
+        demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = \
+            self._motion_loader.sample(num_samples=self.num_envs, times=demo_time_np)
+
+        return demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel
 
     def step(self, actions):
+
+        demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = self.sample_motion_data()
+        self.demo_body_pos = demo_body_pos
+
         if self.cfg.env.use_ref_actions:
             actions += self.ref_action
-        
+
         actions = torch.clip(actions, -self.cfg.normalization.clip_actions, self.cfg.normalization.clip_actions)
         # print(actions)
         # dynamic randomization
         # print(self.dof_pos)
         delay = torch.rand((self.num_envs, 1), device=self.device) * self.cfg.domain_rand.action_delay
         actions = (1 - delay) * actions + delay * self.actions
-        actions += self.cfg.domain_rand.action_noise * torch.randn_like(actions) * actions 
+        actions += self.cfg.domain_rand.action_noise * torch.randn_like(actions) * actions
         return super().step(actions)
+
+    # def reset_idx(self, env_ids):
+    #     self.demo_time[env_ids] = 0.0
+    #     return super().reset_idx(env_ids)
 
 
     def compute_observations(self):

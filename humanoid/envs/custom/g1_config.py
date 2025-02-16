@@ -18,6 +18,7 @@ class G1Cfg(LeggedRobotCfg):
         num_envs = 4096
         episode_length_s = 24     # episode length in seconds
         use_ref_actions = False   # speed up training by using reference actions
+        motion_file = 'humanoid/envs/custom/motions/humanoid_dance.npz'
 
     class safety:
         # safety factors

@@ -33,7 +33,7 @@ import os
 import cv2
 import copy
 import numpy as np
-from isaacgym import gymapi
+from isaacgym import gymapi, gymutil
 from humanoid import LEGGED_GYM_ROOT_DIR
 
 # import isaacgym
@@ -107,7 +107,7 @@ def play(args):
         camera_properties.width = 1920
         camera_properties.height = 1080
         h1 = env.gym.create_camera_sensor(env.envs[0], camera_properties)
-        camera_offset = gymapi.Vec3(1, -1, 0.8)
+        camera_offset = gymapi.Vec3(2, -2, 2.8)
         camera_rotation = gymapi.Quat.from_axis_angle(gymapi.Vec3(-0.3, 0.2, 1),
                                                     np.deg2rad(135))
         actor_handle = env.gym.get_actor_handle(env.envs[0], 0)
@@ -129,7 +129,7 @@ def play(args):
 
     for i in tqdm(range(stop_state_log)):
 
-        actions = policy(obs.detach()) #* 0.
+        actions = policy(obs.detach()) * 0.
         # print(actions)
         if FIX_COMMAND:
             env.commands[:, 0] = -0.  # 1.0
@@ -162,6 +162,23 @@ def play(args):
             img = env.gym.get_camera_image(env.sim, env.envs[0], h1, gymapi.IMAGE_COLOR)
             img = np.reshape(img, (1080, 1920, 4))
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+            env.gym.clear_lines(env.viewer)
+            demo_body_pos_np = env.demo_body_pos.cpu().numpy()
+            num_bodies = demo_body_pos_np.shape[1]
+
+            marker_geom = gymutil.WireframeSphereGeometry(
+                radius=0.05,
+                color=(1, 0, 0)
+            )
+
+            for i in range(num_bodies):
+                pos = demo_body_pos_np[0, i]
+                sphere_pose = gymapi.Transform()
+                sphere_pose.p = gymapi.Vec3(*pos)
+
+                gymutil.draw_lines(marker_geom, env.gym, env.viewer, env.envs[0], sphere_pose)
+
             video.write(img[..., :3])
 
         # print(env.dof_vel[robot_index])
@@ -192,7 +209,7 @@ def play(args):
     logger.plot_states()
     
     # fig, ax = plt.subplots()
-    ax.plot(torques)
+    # ax.plot(torques)
     if RENDER:
         video.release()
 
