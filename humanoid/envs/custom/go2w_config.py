@@ -42,20 +42,20 @@ class Go2wCfg(LeggedRobotCfg):
         fix_base_link = False
 
     class terrain(LeggedRobotCfg.terrain):
-        mesh_type = 'plane'
-        # mesh_type = 'trimesh'
-        curriculum = False
+        # mesh_type = 'plane'
+        mesh_type = 'trimesh'
+        curriculum = True
         # rough terrain only:
         measure_heights = False
         static_friction = 0.6
         dynamic_friction = 0.6
-        terrain_length = 8.
-        terrain_width = 8.
+        terrain_length = 4.
+        terrain_width = 4.
         num_rows = 20  # number of terrain rows (levels)
         num_cols = 20  # number of terrain cols (types)
         max_init_terrain_level = 10  # starting curriculum state
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
-        terrain_proportions = [0.2, 0.2, 0.4, 0.1, 0.1, 0, 0]
+        terrain_proportions = [0, 0.2, 0.2, 0.1, 0.1, 0.2, 0.2]
         restitution = 0.
 
     class noise:
@@ -119,7 +119,7 @@ class Go2wCfg(LeggedRobotCfg):
             rest_offset = 0.0   # [m]
             bounce_threshold_velocity = 0.5  # [m/s]
             max_depenetration_velocity = 1.0
-            max_gpu_contact_pairs = 2**23  # 2**24 -> needed for 8000 envs and more
+            max_gpu_contact_pairs = 2**22  # 2**24 -> needed for 8000 envs and more
             default_buffer_size_multiplier = 5
             # 0: never, 1: last sub-step, 2: all sub-steps (default=2)
             contact_collection = 2
