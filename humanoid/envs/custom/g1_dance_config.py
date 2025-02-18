@@ -1,7 +1,7 @@
 from humanoid.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
 
-class G1Cfg(LeggedRobotCfg):
+class G1DacneCfg(LeggedRobotCfg):
     """
     Configuration class for the XBotL humanoid robot.
     """
@@ -18,6 +18,7 @@ class G1Cfg(LeggedRobotCfg):
         num_envs = 4096
         episode_length_s = 24     # episode length in seconds
         use_ref_actions = False   # speed up training by using reference actions
+        motion_file = 'humanoid/envs/custom/motions/humanoid_dance.npz'
 
     class safety:
         # safety factors
@@ -26,7 +27,7 @@ class G1Cfg(LeggedRobotCfg):
         torque_limit = 0.85
 
     class asset(LeggedRobotCfg.asset):
-        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1_description/g1_12dof.urdf'
+        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1_description/g1_23dof_rev_1_0.urdf'
         name = "g1"
         foot_name = "ankle_roll"
         knee_name = "knee"
@@ -92,6 +93,7 @@ class G1Cfg(LeggedRobotCfg):
                      'knee': 150,
                      'ankle': 40,
                      }  # [N*m/rad]
+
         damping = {  'hip_yaw': 2,
                      'hip_roll': 2,
                      'hip_pitch': 2,
@@ -235,7 +237,7 @@ class G1Cfg(LeggedRobotCfg):
         clip_actions = 100
 
 
-class G1CfgPPO(LeggedRobotCfgPPO):
+class G1DacneCfgPPO(LeggedRobotCfgPPO):
     seed = 5
     runner_class_name = 'OnPolicyRunner'   # DWLOnPolicyRunner
 

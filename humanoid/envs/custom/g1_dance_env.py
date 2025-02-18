@@ -7,10 +7,11 @@ import torch
 from humanoid.envs import LeggedRobot
 
 from humanoid.utils.terrain import  HumanoidTerrain
+from humanoid.envs.custom.motions.motion_loader import MotionLoader
 
 
 
-class G1FreeEnv(LeggedRobot):
+class G1DacneFreeEnv(LeggedRobot):
     '''
     G1FreeEnv is a class that represents a custom environment for a legged robot.
 
@@ -50,6 +51,8 @@ class G1FreeEnv(LeggedRobot):
         self.feet_height = torch.zeros((self.num_envs, 2), device=self.device)
         self.reset_idx(torch.tensor(range(self.num_envs), device=self.device))
         self.compute_observations()
+        self._motion_loader = MotionLoader(motion_file=cfg.env.motion_file, device=self.device)
+        self.demo_time = torch.zeros(self.num_envs, device=self.device)
 
     def _push_robots(self):
         """ Random pushes the robots. Emulates an impulse by setting a randomized base velocity. 
@@ -155,8 +158,23 @@ class G1FreeEnv(LeggedRobot):
         noise_vec[42: 45] = noise_scales.quat * self.obs_scales.quat         # euler x,y
         return noise_vec
 
+    def sample_motion_data(self):
+        control_dt = 0.02
+        # control_dt = self.dt
+        self.demo_time += control_dt
+        self.demo_time = torch.where(self.demo_time > self._motion_loader.duration, torch.zeros_like(self.demo_time),
+                                     self.demo_time)
+        demo_time_np = self.demo_time.cpu().numpy()
+        demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = \
+            self._motion_loader.sample(num_samples=self.num_envs, times=demo_time_np)
+
+        return demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel
 
     def step(self, actions):
+
+        demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = self.sample_motion_data()
+        self.demo_body_pos = demo_body_pos
+
         if self.cfg.env.use_ref_actions:
             actions += self.ref_action
 
