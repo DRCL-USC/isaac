@@ -1,3 +1,5 @@
+from requests.packages import target
+
 from humanoid.envs.base.legged_robot_config import LeggedRobotCfg
 
 from isaacgym.torch_utils import *
@@ -10,6 +12,14 @@ from humanoid.utils.terrain import  HumanoidTerrain
 from humanoid.envs.custom.motions.motion_loader import MotionLoader
 
 
+
+
+def get_euler_xyz_tensor(quat):
+    r, p, w = get_euler_xyz(quat)
+    # stack r, p, w in dim1
+    euler_xyz = torch.stack((r, p, w), dim=1)
+    euler_xyz[euler_xyz > np.pi] -= 2 * np.pi
+    return euler_xyz
 
 class G1DacneFreeEnv(LeggedRobot):
     '''
@@ -47,12 +57,18 @@ class G1DacneFreeEnv(LeggedRobot):
     '''
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
+        self.demo_time = torch.zeros(self.num_envs, device=self.device)
+        self._motion_loader = MotionLoader(motion_file=cfg.env.motion_file, device=self.device)
+        self.target_dof_pos = torch.zeros((self.num_envs, self.num_dof), device=self.device)
+        self.target_body_pos = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
+        self.target_body_rot = torch.zeros((self.num_envs, self.num_bodies, 4), device=self.device)
+        self.target_body_lin_vel = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
+        self.target_body_ang_vel = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
         self.last_feet_z = 0.05
         self.feet_height = torch.zeros((self.num_envs, 2), device=self.device)
         self.reset_idx(torch.tensor(range(self.num_envs), device=self.device))
         self.compute_observations()
-        self._motion_loader = MotionLoader(motion_file=cfg.env.motion_file, device=self.device)
-        self.demo_time = torch.zeros(self.num_envs, device=self.device)
+
 
     def _push_robots(self):
         """ Random pushes the robots. Emulates an impulse by setting a randomized base velocity. 
@@ -158,22 +174,56 @@ class G1DacneFreeEnv(LeggedRobot):
         noise_vec[42: 45] = noise_scales.quat * self.obs_scales.quat         # euler x,y
         return noise_vec
 
+    # def sample_motion_data(self):
+    #     control_dt = 0.02
+    #     # control_dt = self.dt
+    #     self.demo_time += control_dt
+    #     self.demo_time = torch.where(self.demo_time > self._motion_loader.duration, torch.zeros_like(self.demo_time),
+    #                                  self.demo_time)
+    #     demo_time_np = self.demo_time.cpu().numpy()
+    #     demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = \
+    #         self._motion_loader.sample(num_samples=self.num_envs, times=demo_time_np)
+    #     return demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel
+
     def sample_motion_data(self):
-        control_dt = 0.02
-        # control_dt = self.dt
+        # control_dt = 0.02
+        control_dt = self.dt
         self.demo_time += control_dt
-        self.demo_time = torch.where(self.demo_time > self._motion_loader.duration, torch.zeros_like(self.demo_time),
-                                     self.demo_time)
+        self.demo_time = torch.where(
+            self.demo_time > self._motion_loader.duration,
+            torch.zeros_like(self.demo_time),
+            self.demo_time
+        )
         demo_time_np = self.demo_time.cpu().numpy()
         demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = \
             self._motion_loader.sample(num_samples=self.num_envs, times=demo_time_np)
+
+        remove_names = ['pelvis_contour_link', 'head_link', 'left_rubber_hand', 'logo_link', 'right_rubber_hand']
+        keep_indices = [i for i, name in enumerate(self.body_names) if name not in remove_names]
+
+        demo_body_pos = demo_body_pos[:, keep_indices, ...]
+        demo_body_rot = demo_body_rot[:, keep_indices, ...]
+        demo_body_lin_vel = demo_body_lin_vel[:, keep_indices, ...]
+        demo_body_ang_vel = demo_body_ang_vel[:, keep_indices, ...]
+        #
+        # print("demo_body_pos shape:", demo_body_pos.shape) #(30, 3)
+        # print("demo_body_rot shape:", demo_body_rot.shape) #(30, 4)
+        # print("demo_body_lin_vel shape:", demo_body_lin_vel.shape) #(30, 3)
+        # print("demo_body_ang_vel shape:", demo_body_ang_vel.shape) #(30, 3)
 
         return demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel
 
     def step(self, actions):
 
-        demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = self.sample_motion_data()
-        self.demo_body_pos = demo_body_pos
+        # demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = self.sample_motion_data()
+        # # self.demo_body_pos = demo_body_pos
+        # self.target_dof_pos = demo_dof_pos[:, -29:]
+        # self.target_body_pos = demo_body_pos
+        # self.target_body_rot = demo_body_rot
+        # self.target_body_lin_vel = demo_body_lin_vel
+        # self.target_body_ang_vel = demo_body_ang_vel
+        # target_root_quat = self.target_body_rot[:, 0, :]
+        # self.target_root_euler = get_euler_xyz_tensor(target_root_quat)
 
         if self.cfg.env.use_ref_actions:
             actions += self.ref_action
@@ -189,6 +239,16 @@ class G1DacneFreeEnv(LeggedRobot):
 
 
     def compute_observations(self):
+
+        demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = self.sample_motion_data()
+        # self.demo_body_pos = demo_body_pos
+        self.target_dof_pos = demo_dof_pos[:, -29:]
+        self.target_body_pos = demo_body_pos
+        self.target_body_rot = demo_body_rot
+        self.target_body_lin_vel = demo_body_lin_vel
+        self.target_body_ang_vel = demo_body_ang_vel
+        target_root_quat = self.target_body_rot[:, 0, :]
+        self.target_root_euler = get_euler_xyz_tensor(target_root_quat)
 
         phase = self._get_phase()
         self.compute_ref_state()
@@ -218,7 +278,7 @@ class G1DacneFreeEnv(LeggedRobot):
         diff = self.dof_pos - self.default_dof_pos
         # print(self.dof_pos - self.last_dof_pos)
         self.privileged_obs_buf = torch.cat((
-            self.command_input,
+            # self.command_input,
             (self.dof_pos - self.default_joint_pd_target) * \
             self.obs_scales.dof_pos,  # 12
             self.dof_pos, # 12
@@ -238,15 +298,17 @@ class G1DacneFreeEnv(LeggedRobot):
             self.body_mass,  # 1
             stance_mask,  # 2
             contact_mask,  # 2
+            self.target_dof_pos, #29
         ), dim=-1)
 
         obs_buf = torch.cat((
-            self.command_input, #3
+            # self.command_input, #3
             q,    # 12D
             dq,  # 12D
             self.actions,   # 12D
             self.base_ang_vel * self.obs_scales.ang_vel,  # 3
             self.base_euler_xyz * self.obs_scales.quat,  # 3
+            self.target_dof_pos,  # 29
         ), dim=-1)
         # print(self.measured_heights.size())
         # if self.cfg.terrain.measure_heights:
@@ -287,6 +349,7 @@ class G1DacneFreeEnv(LeggedRobot):
 
     def reset_idx(self, env_ids):
         super().reset_idx(env_ids)
+        self.demo_time[env_ids] = 0.  # reset demo states
         for i in range(self.obs_history.maxlen):
             self.obs_history[i][env_ids] *= 0
         for i in range(self.critic_history.maxlen):
@@ -343,19 +406,35 @@ class G1DacneFreeEnv(LeggedRobot):
         self.feet_height *= ~contact
         return rew_pos
     
+    # def _reward_default_joint_pos(self):
+    #     """
+    #     Calculates the reward for keeping joint positions close to default positions, with a focus
+    #     on penalizing deviation in yaw and roll directions. Excludes yaw and roll from the main penalty.
+    #     """
+    #     joint_diff = self.dof_pos - self.default_joint_pd_target
+    #     joint_diff[:, 0] = 0
+    #     joint_diff[:, 6] = 0
+    #     joint_diff[:, 4] = 0
+    #     joint_diff[:, 10] = 0
+    #     left_yaw_roll = joint_diff[:, 1:3]
+    #     right_yaw_roll = joint_diff[:,7:9]
+    #     yaw_roll = torch.norm(left_yaw_roll, dim=1) + torch.norm(right_yaw_roll, dim=1)
+    #     yaw_roll = torch.clamp(yaw_roll - 0.1, 0, 50)
+    #     return torch.exp(-yaw_roll * 2.0) - 0.01 * torch.norm(joint_diff, dim=1)
     def _reward_default_joint_pos(self):
         """
-        Calculates the reward for keeping joint positions close to default positions, with a focus 
+        Calculates the reward for keeping joint positions close to default positions, with a focus
         on penalizing deviation in yaw and roll directions. Excludes yaw and roll from the main penalty.
         """
-        joint_diff = self.dof_pos - self.default_joint_pd_target
+        # joint_diff = self.dof_pos - self.default_joint_pd_target
+        joint_diff = self.dof_pos - self.target_dof_pos
         joint_diff[:, 0] = 0
         joint_diff[:, 6] = 0
         joint_diff[:, 4] = 0
         joint_diff[:, 10] = 0
         left_yaw_roll = joint_diff[:, 1:3]
         right_yaw_roll = joint_diff[:,7:9]
-        yaw_roll = torch.norm(left_yaw_roll, dim=1) + torch.norm(right_yaw_roll, dim=1) 
+        yaw_roll = torch.norm(left_yaw_roll, dim=1) + torch.norm(right_yaw_roll, dim=1)
         yaw_roll = torch.clamp(yaw_roll - 0.1, 0, 50)
         return torch.exp(-yaw_roll * 2.0) - 0.01 * torch.norm(joint_diff, dim=1)
     
@@ -463,3 +542,65 @@ class G1DacneFreeEnv(LeggedRobot):
     def _reward_feet_contact_forces(self):
         # penalize high contact forces
         return torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  self.cfg.rewards.max_contact_force).clip(min=0.), dim=1)
+
+    def _reward_dof_position(self):
+        """
+        DoF Position Reward:
+        r_dof = 3.0 * exp( -0.7 * sum(|q_ref - q|) )
+        dof_pos, target_dof_pos: shape (N, D)
+        """
+        error = torch.sum(torch.abs(self.target_dof_pos - self.dof_pos), dim=1)  # (N,)
+        return torch.exp(-0.7 * error)
+
+    def _reward_keypoint_position(self):
+        """
+        Keypoint Position Reward:
+        r_kp = 2.0 * exp( -||p_ref - p|| )
+        keypoint_pos, target_keypoint_pos: shape (N, num_bodies, 3)
+        loss pelvis_contour_link, head_link, left_rubber_hand, logo_link, right_rubber_hand
+        """
+        error = torch.norm(self.target_body_pos - self.rigid_state[:, :, :3], dim=2)  # (N, num_bodies, 3)
+        error = torch.mean(error, dim=1)  # shape: (N,)
+        return torch.exp(-error)
+        return torch.exp(-error)
+
+    def _reward_lin_velocity(self):
+        """
+        Linear Velocity Reward:
+        r_linVel = 6.0 * exp( -4.0 * ||v_ref - v|| )
+        base_lin_vel, target_lin_vel: shape (N, 3)
+        """
+        target_base_lin_vel = self.target_body_lin_vel[:, 0, :].squeeze(1)
+        error = torch.norm(target_base_lin_vel - self.base_lin_vel, dim=1)  # (N,)
+        return torch.exp(-4.0 * error)
+
+    def _reward_vel_direction(self):
+        """
+        Velocity Direction Reward:
+        r_dir = 6.0 * exp( -4.0 * (1 - cos(v_ref, v)) )
+        """
+        eps = 1e-8
+        target_base_lin_vel = self.target_body_lin_vel[:, 0, :].squeeze(1)
+        dot = torch.sum(target_base_lin_vel * self.base_lin_vel, dim=1)  # (N,)
+        norm_target = torch.norm(target_base_lin_vel, dim=1)  # (N,)
+        norm_base = torch.norm(self.base_lin_vel, dim=1)  # (N,)
+        cos_angle = dot / (norm_target * norm_base + eps)
+        return torch.exp(-4.0 * (1 - cos_angle))
+
+    def _reward_roll_pitch(self):
+        """
+        Roll & Pitch Reward:
+        r_rp = 1.0 * exp( - (|roll_ref - roll| + |pitch_ref - pitch|) )
+        roll_pitch, target_roll_pitch: shape (N, 2)
+        """
+        error = torch.sum(torch.abs(self.target_root_euler[:, :2] - self.base_euler_xyz[:, :2]), dim=1)  # (N,)
+        return torch.exp(-error)
+
+    def _reward_yaw(self):
+        """
+        Yaw Reward:
+        r_yaw = 1.0 * exp( -|yaw_ref - yaw| )
+        yaw, target_yaw: shape (N,)
+        """
+        error = torch.abs(self.target_root_euler[:, 2] - self.base_euler_xyz[:, 2])  # (N,)
+        return torch.exp(-error)

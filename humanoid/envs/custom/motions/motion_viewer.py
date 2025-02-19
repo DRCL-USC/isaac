@@ -8,6 +8,7 @@ import matplotlib.animation
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from typing import Union
 
 import mpl_toolkits.mplot3d  # noqa: F401
 from motion_loader import MotionLoader
@@ -18,7 +19,7 @@ class MotionViewer:
     Helper class to visualize motion data from NumPy-file format.
     """
 
-    def __init__(self, motion_file: str, device: torch.device | str = "cpu", render_scene: bool = False) -> None:
+    def __init__(self, motion_file: str, device: Union[torch.device, str] = "cpu", render_scene: bool = False) -> None:
         """Load a motion file and initialize the internal variables.
 
         Args:
@@ -55,7 +56,7 @@ class MotionViewer:
         # draw skeleton state
         self._figure_axes.clear()
         self._figure_axes.scatter(*vertices.T, color="black", depthshade=False)
-        # adjust exes according to motion view
+        # adjust axes according to motion view
         # - scene
         if self._render_scene:
             # compute axes limits

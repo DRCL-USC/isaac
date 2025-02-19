@@ -9,16 +9,20 @@ class G1DacneCfg(LeggedRobotCfg):
         # change the observation dim
         frame_stack = 15
         c_frame_stack = 1
-        num_single_obs = 45
+        # num_single_obs = 45
+        num_single_obs = 96 + 29 - 3
         num_observations = int(frame_stack * num_single_obs)
-        single_num_privileged_obs = 86 
+        # single_num_privileged_obs = 86
+        single_num_privileged_obs = 154 + 29 - 3
         # + 187
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
-        num_actions = 12
+        # num_actions = 12
+        num_actions = 29
         num_envs = 4096
-        episode_length_s = 24     # episode length in seconds
+        # episode_length_s = 24     # episode length in seconds
+        episode_length_s = 30  # episode length in seconds
         use_ref_actions = False   # speed up training by using reference actions
-        motion_file = 'humanoid/envs/custom/motions/humanoid_dance.npz'
+        motion_file = 'humanoid/envs/custom/motions/skeleton_data.npz'
 
     class safety:
         # safety factors
@@ -27,7 +31,8 @@ class G1DacneCfg(LeggedRobotCfg):
         torque_limit = 0.85
 
     class asset(LeggedRobotCfg.asset):
-        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1_description/g1_23dof_rev_1_0.urdf'
+        # file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1_description/g1_23dof_rev_1_0.urdf'
+        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1_description/g1_29dof_rev_1_0.urdf'
         name = "g1"
         foot_name = "ankle_roll"
         knee_name = "knee"
@@ -69,20 +74,51 @@ class G1DacneCfg(LeggedRobotCfg):
 
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.8] # x,y,z [m]
-        default_joint_angles = { # = target angles [rad] when action = 0.0
-           'left_hip_yaw_joint' : 0. ,   
-           'left_hip_roll_joint' : 0,               
-           'left_hip_pitch_joint' : -0.1,         
-           'left_knee_joint' : 0.2,       
-           'left_ankle_pitch_joint' : -0.1,     
-           'left_ankle_roll_joint' : 0,     
-           'right_hip_yaw_joint' : 0., 
-           'right_hip_roll_joint' : 0, 
-           'right_hip_pitch_joint' : -0.1,                                       
-           'right_knee_joint' : 0.2,                                             
-           'right_ankle_pitch_joint': -0.1,                              
-           'right_ankle_roll_joint' : 0,       
-           'torso_joint' : 0.
+        # default_joint_angles = { # = target angles [rad] when action = 0.0
+        #    'left_hip_yaw_joint' : 0. ,
+        #    'left_hip_roll_joint' : 0,
+        #    'left_hip_pitch_joint' : -0.1,
+        #    'left_knee_joint' : 0.2,
+        #    'left_ankle_pitch_joint' : -0.1,
+        #    'left_ankle_roll_joint' : 0,
+        #    'right_hip_yaw_joint' : 0.,
+        #    'right_hip_roll_joint' : 0,
+        #    'right_hip_pitch_joint' : -0.1,
+        #    'right_knee_joint' : 0.2,
+        #    'right_ankle_pitch_joint': -0.1,
+        #    'right_ankle_roll_joint' : 0,
+        #    'torso_joint' : 0.
+        # }
+        default_joint_angles = {
+            'left_hip_yaw_joint': 0.0,
+            'left_hip_roll_joint': 0.0,
+            'left_hip_pitch_joint': -0.15,
+            'left_knee_joint': 0.3,
+            'left_ankle_pitch_joint': -0.15,
+            'left_ankle_roll_joint': 0.0,
+            'right_hip_yaw_joint': 0.0,
+            'right_hip_roll_joint': 0.0,
+            'right_hip_pitch_joint': -0.15,
+            'right_knee_joint': 0.3,
+            'right_ankle_pitch_joint': -0.15,
+            'right_ankle_roll_joint': 0.0,
+            'waist_yaw_joint': 0.0,
+            'waist_roll_joint': 0.0,
+            'waist_pitch_joint': 0.0,
+            'left_shoulder_pitch_joint': 0.0,
+            'left_shoulder_roll_joint': 1.57,
+            'left_shoulder_yaw_joint': 0.0,
+            'left_elbow_joint': 1.57,
+            'left_wrist_roll_joint': 0.0,
+            'left_wrist_pitch_joint': 0.0,
+            'left_wrist_yaw_joint': 0.0,
+            'right_shoulder_pitch_joint': 0.0,
+            'right_shoulder_roll_joint': -1.57,
+            'right_shoulder_yaw_joint': 0.0,
+            'right_elbow_joint': 1.57,
+            'right_wrist_roll_joint': 0.0,
+            'right_wrist_pitch_joint': 0.0,
+            'right_wrist_yaw_joint': 0.0,
         }
 
     class control(LeggedRobotCfg.control):
@@ -204,13 +240,13 @@ class G1DacneCfg(LeggedRobotCfg):
         max_contact_force = 600  # Forces above this value are penalized
 
         class scales:
-            termination = -0.
+            termination = -1.
             default_joint_pos = 2.8
             feet_contact_number = 1.0
             foot_slip = -0.1
             feet_clearance = 0.02
-            tracking_lin_vel = 3.0
-            tracking_ang_vel = 2.5
+            # tracking_lin_vel = 3.0
+            # tracking_ang_vel = 2.5
             ang_vel_xy = -0.5
             torques = -5.e-8
             dof_acc = -5.e-8
@@ -218,12 +254,21 @@ class G1DacneCfg(LeggedRobotCfg):
             feet_air_time = 100.
             orientation = -3.0
             dof_pos_limits = -10.0
-            base_height = -20.0
+            # base_height = -20.0
             no_fly = 0.8
             dof_vel = -5.e-7
             # torque_limits = -0.01
 
             action_rate = -0.08
+            dof_position = 3.0
+            keypoint_position = 2.0
+            lin_velocity = 6.0
+            vel_direction = 6.0
+            roll_pitch = 1.0
+            yaw = 1.0
+
+
+
 
     class normalization:
         class obs_scales:

@@ -129,7 +129,6 @@ class LeggedRobot(BaseTask):
 
         self.episode_length_buf += 1
         self.common_step_counter += 1
-
         # prepare quantities
         self.base_quat[:] = self.root_states[:, 3:7]
         self.base_lin_vel[:] = quat_rotate_inverse(self.base_quat, self.root_states[:, 7:10])
@@ -217,7 +216,8 @@ class LeggedRobot(BaseTask):
         self.base_quat[env_ids] = self.root_states[env_ids, 3:7]
         self.base_euler_xyz = get_euler_xyz_tensor(self.base_quat)
         self.projected_gravity[env_ids] = quat_rotate_inverse(self.base_quat[env_ids], self.gravity_vec[env_ids])
-    
+
+
     def compute_reward(self):
         """ Compute rewards
             Calls each reward function which had a non-zero scale (processed in self._prepare_reward_function())
@@ -515,7 +515,6 @@ class LeggedRobot(BaseTask):
 
         self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(self.num_envs, -1, 3) # shape: num_envs, num_bodies, xyz axis
         self.rigid_state = gymtorch.wrap_tensor(rigid_body_state).view(self.num_envs, -1, 13)
-
         # initialize some data used later on
         self.common_step_counter = 0
         self.extras = {}
@@ -694,6 +693,7 @@ class LeggedRobot(BaseTask):
 
         # save body names from the asset
         body_names = self.gym.get_asset_rigid_body_names(robot_asset)
+        self.body_names = body_names
         self.dof_names = self.gym.get_asset_dof_names(robot_asset)
         # print(self.dof_names)
         self.num_bodies = len(body_names)
