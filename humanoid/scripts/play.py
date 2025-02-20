@@ -130,24 +130,24 @@ def play(args):
 
     for i in tqdm(range(stop_state_log)):
 
-        actions = policy(obs.detach()) * 0.
+        actions = policy(obs.detach())*0
         # print(actions)
-        if FIX_COMMAND:
-            env.commands[:, 0] = -0.  # 1.0
-            env.commands[:, 1] = 0.
-            env.commands[:, 2] = 0.
-            env.commands[:, 3] = 0.
-        
-        if i > 200:
-            env.commands[:, 0] = 1
+        # if FIX_COMMAND:
+        #     env.commands[:, 0] = -0.  # 1.0
+        #     env.commands[:, 1] = 0.
+        #     env.commands[:, 2] = 0.
+        #     env.commands[:, 3] = 0.
+        #
+        # if i > 200:
+        #     env.commands[:, 0] = 1
 
         # if i > 400:
             # env.commands[:, 0] = 0.
             # env.commands[:, 1] = 0.4
 
 
-        if i > 800:
-            env.commands[:, 2] = 0.8
+        # if i > 800:
+        #     env.commands[:, 2] = 0.8
             # env.commands[:, 2] = 0.5
         # print(env.torques[robot_index, joint_index].item())
         torques.append(env.torques[robot_index, joint_index].item())
@@ -165,7 +165,7 @@ def play(args):
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
             env.gym.clear_lines(env.viewer)
-            demo_body_pos_np = env.demo_body_pos.cpu().numpy()
+            demo_body_pos_np = env.target_body_pos.cpu().numpy()
             num_bodies = demo_body_pos_np.shape[1]
 
             marker_geom = gymutil.WireframeSphereGeometry(

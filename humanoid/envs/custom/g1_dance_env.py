@@ -243,6 +243,7 @@ class G1DacneFreeEnv(LeggedRobot):
         demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = self.sample_motion_data()
         # self.demo_body_pos = demo_body_pos
         self.target_dof_pos = demo_dof_pos[:, -29:]
+        # self.default_dof_pos = self.target_dof_pos
         self.target_body_pos = demo_body_pos
         self.target_body_rot = demo_body_rot
         self.target_body_lin_vel = demo_body_lin_vel
@@ -561,7 +562,6 @@ class G1DacneFreeEnv(LeggedRobot):
         """
         error = torch.norm(self.target_body_pos - self.rigid_state[:, :, :3], dim=2)  # (N, num_bodies, 3)
         error = torch.mean(error, dim=1)  # shape: (N,)
-        return torch.exp(-error)
         return torch.exp(-error)
 
     def _reward_lin_velocity(self):

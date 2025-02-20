@@ -26,7 +26,7 @@ class G1DacneCfg(LeggedRobotCfg):
 
     class safety:
         # safety factors
-        pos_limit = 0.85
+        pos_limit = 0.95
         vel_limit = 0.7
         torque_limit = 0.85
 
@@ -42,6 +42,7 @@ class G1DacneCfg(LeggedRobotCfg):
         flip_visual_attachments = False
         replace_cylinder_with_capsule = False
         fix_base_link = False
+        # fix_base_link = True
 
     class terrain(LeggedRobotCfg.terrain):
         mesh_type = 'plane'
@@ -123,25 +124,48 @@ class G1DacneCfg(LeggedRobotCfg):
 
     class control(LeggedRobotCfg.control):
           # PD Drive parameters:
-        stiffness = {'hip_yaw': 100,
-                     'hip_roll': 100,
-                     'hip_pitch': 100,
-                     'knee': 150,
-                     'ankle': 40,
-                     }  # [N*m/rad]
+        # stiffness = {'hip_yaw': 100,
+        #              'hip_roll': 100,
+        #              'hip_pitch': 100,
+        #              'knee': 150,
+        #              'ankle': 40,
+        #              }  # [N*m/rad]
+        #
+        # damping = {  'hip_yaw': 2,
+        #              'hip_roll': 2,
+        #              'hip_pitch': 2,
+        #              'knee': 4,
+        #              'ankle': 2,
+        #              }  # [N*m/rad]  # [N*m*s/rad]
+        stiffness = {
+              'hip_yaw': 100,
+              'hip_roll': 100,
+              'hip_pitch': 100,
+              'knee': 150,
+              'ankle': 40,
+              'shoulder': 40,
+              'elbow': 40,
+              'wrist': 40,
+              'waist': 60,
+        }
 
-        damping = {  'hip_yaw': 2,
-                     'hip_roll': 2,
-                     'hip_pitch': 2,
-                     'knee': 4,
-                     'ankle': 2,
-                     }  # [N*m/rad]  # [N*m*s/rad]
+        damping = {
+              'hip_yaw': 2,
+              'hip_roll': 2,
+              'hip_pitch': 2,
+              'knee': 4,
+              'ankle': 2,
+              'shoulder': 1,
+              'elbow': 1,
+              'wrist': 1,
+              'waist': 2,
+        }
         # action scale: target angle = actionScale * action + defaultAngle
 
         # action scale: target angle = actionScale * action + defaultAngle
         action_scale = 0.25
         # decimation: Number of control action updates @ sim DT per policy DT
-        decimation = 10  # 50hz
+        decimation = 20  # 50hz
 
     class sim(LeggedRobotCfg.sim):
         dt = 0.001  # 1000 Hz
@@ -241,8 +265,8 @@ class G1DacneCfg(LeggedRobotCfg):
 
         class scales:
             termination = -1.
-            default_joint_pos = 2.8
-            feet_contact_number = 1.0
+            # default_joint_pos = 2.8
+            feet_contact_number = 0.0
             foot_slip = -0.1
             feet_clearance = 0.02
             # tracking_lin_vel = 3.0
@@ -251,11 +275,11 @@ class G1DacneCfg(LeggedRobotCfg):
             torques = -5.e-8
             dof_acc = -5.e-8
             lin_vel_z = -1.8
-            feet_air_time = 100.
+            feet_air_time = 0.
             orientation = -3.0
             dof_pos_limits = -10.0
             # base_height = -20.0
-            no_fly = 0.8
+            no_fly = 0.0
             dof_vel = -5.e-7
             # torque_limits = -0.01
 
