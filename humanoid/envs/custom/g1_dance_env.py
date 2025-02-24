@@ -64,6 +64,14 @@ class G1DacneFreeEnv(LeggedRobot):
         self.target_body_rot = torch.zeros((self.num_envs, self.num_bodies, 4), device=self.device)
         self.target_body_lin_vel = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
         self.target_body_ang_vel = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
+        self.target_keypoint_pos = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
+        self.target_keypoint_rot = torch.zeros((self.num_envs, self.num_bodies, 4), device=self.device)
+        self.target_keypoint_lin_vel = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
+        self.target_keypoint_ang_vel = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
+        self.keypoint_pos = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
+        self.keypoint_rot = torch.zeros((self.num_envs, self.num_bodies, 4), device=self.device)
+        self.keypoint_lin_vel = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
+        self.keypoint_ang_vel = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
         self.last_feet_z = 0.05
         self.feet_height = torch.zeros((self.num_envs, 2), device=self.device)
         self.reset_idx(torch.tensor(range(self.num_envs), device=self.device))
@@ -189,22 +197,51 @@ class G1DacneFreeEnv(LeggedRobot):
         # control_dt = 0.02
         control_dt = self.dt
         self.demo_time += control_dt
-        self.demo_time = torch.where(
-            self.demo_time > self._motion_loader.duration,
-            torch.zeros_like(self.demo_time),
-            self.demo_time
-        )
-        demo_time_np = self.demo_time.cpu().numpy()
+        effective_demo_time = torch.where(self.demo_time < 0.2,
+                                          torch.zeros_like(self.demo_time),
+                                          self.demo_time)
+        effective_demo_time = torch.where(effective_demo_time > self._motion_loader.duration,
+                                          torch.zeros_like(effective_demo_time),
+                                          effective_demo_time)
+        demo_time_np = effective_demo_time.cpu().numpy()
         demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = \
             self._motion_loader.sample(num_samples=self.num_envs, times=demo_time_np)
 
-        remove_names = ['pelvis_contour_link', 'head_link', 'left_rubber_hand', 'logo_link', 'right_rubber_hand']
-        keep_indices = [i for i, name in enumerate(self.body_names) if name not in remove_names]
+        # self.demo_time = torch.where(
+        #     self.demo_time > self._motion_loader.duration,
+        #     torch.zeros_like(self.demo_time),
+        #     self.demo_time
+        # )
+        # demo_time_np = self.demo_time.cpu().numpy()
+        # demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = \
+        #     self._motion_loader.sample(num_samples=self.num_envs, times=demo_time_np)
+        keypoint_names = ['left_shoulder_pitch_link', 'right_shoulder_pitch_link',
+                          'left_elbow_link', 'right_elbow_link',
+                          'left_wrist_pitch_link', 'right_wrist_pitch_link',
+                          'left_ankle_pitch_link', 'right_ankle_pitch_link']
+        keypoint_indices = [i for i, name in enumerate(self.body_names) if name in keypoint_names]
+        self.keypoint_pos = demo_body_pos[:, keypoint_indices, ...]
+        self.keypoint_rot = demo_body_rot[:, keypoint_indices, ...]
+        self.keypoint_lin_vel = demo_body_lin_vel[:, keypoint_indices, ...]
+        self.keypoint_ang_vel = demo_body_ang_vel[:, keypoint_indices, ...]
+
+        target_keypoint_indices = [5, 12, 18, 21, 23, 27, 30, 32]
+
+        self.target_keypoint_pos = demo_body_pos[:, target_keypoint_indices, ...]
+        self.target_keypoint_rot = demo_body_rot[:, target_keypoint_indices, ...]
+        self.target_keypoint_lin_vel = demo_body_lin_vel[:, target_keypoint_indices, ...]
+        self.target_keypoint_ang_vel = demo_body_ang_vel[:, target_keypoint_indices, ...]
+
+        # remove_names = ['pelvis_contour_link', 'head_link', 'left_rubber_hand', 'logo_link', 'right_rubber_hand']
+        # keep_indices = [i for i, name in enumerate(self.body_names) if name not in remove_names]
+        skip_indices = {7, 17, 25, 26, 34}
+        keep_indices = [i for i in range(demo_body_pos.shape[1]) if i not in skip_indices]
 
         demo_body_pos = demo_body_pos[:, keep_indices, ...]
         demo_body_rot = demo_body_rot[:, keep_indices, ...]
         demo_body_lin_vel = demo_body_lin_vel[:, keep_indices, ...]
         demo_body_ang_vel = demo_body_ang_vel[:, keep_indices, ...]
+
         #
         # print("demo_body_pos shape:", demo_body_pos.shape) #(30, 3)
         # print("demo_body_rot shape:", demo_body_rot.shape) #(30, 4)
@@ -243,14 +280,14 @@ class G1DacneFreeEnv(LeggedRobot):
         demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = self.sample_motion_data()
         # self.demo_body_pos = demo_body_pos
         self.target_dof_pos = demo_dof_pos[:, -29:]
-        # self.default_dof_pos = self.target_dof_pos
+        self.target_dof_vel = demo_dof_vel[:, -29:]
+        # self.default_dof_pos = self.target_dof_pos #make action base on target_dof_pos
         self.target_body_pos = demo_body_pos
         self.target_body_rot = demo_body_rot
         self.target_body_lin_vel = demo_body_lin_vel
         self.target_body_ang_vel = demo_body_ang_vel
         target_root_quat = self.target_body_rot[:, 0, :]
         self.target_root_euler = get_euler_xyz_tensor(target_root_quat)
-
         phase = self._get_phase()
         self.compute_ref_state()
 
@@ -300,6 +337,9 @@ class G1DacneFreeEnv(LeggedRobot):
             stance_mask,  # 2
             contact_mask,  # 2
             self.target_dof_pos, #29
+            self.target_keypoint_pos.view(-1, 24), #24
+            (self.keypoint_pos-self.target_keypoint_pos).view(-1, 24), #24
+            self.target_dof_vel,  # 29
         ), dim=-1)
 
         obs_buf = torch.cat((
@@ -310,6 +350,9 @@ class G1DacneFreeEnv(LeggedRobot):
             self.base_ang_vel * self.obs_scales.ang_vel,  # 3
             self.base_euler_xyz * self.obs_scales.quat,  # 3
             self.target_dof_pos,  # 29
+            self.target_keypoint_pos.view(-1, 24),  # 24
+            (self.keypoint_pos - self.target_keypoint_pos).view(-1, 24),  # 24
+            self.target_dof_vel,  # 29
         ), dim=-1)
         # print(self.measured_heights.size())
         # if self.cfg.terrain.measure_heights:
@@ -356,6 +399,34 @@ class G1DacneFreeEnv(LeggedRobot):
         for i in range(self.critic_history.maxlen):
             self.critic_history[i][env_ids] *= 0
 
+    def _compute_torques(self, actions):
+        """ Compute torques from actions.
+            Actions can be interpreted as position or velocity targets given to a PD controller, or directly as scaled torques.
+            [NOTE]: torques must have the same dimension as the number of DOFs, even if some DOFs are not actuated.
+
+        Args:
+            actions (torch.Tensor): Actions
+
+        Returns:
+            [torch.Tensor]: Torques sent to the simulation
+        """
+        # pd controller
+        actions_scaled = actions * self.cfg.control.action_scale
+        p_gains = self.p_gains * self.p_gains_multiplier
+        d_gains = self.d_gains * self.d_gains_multiplier
+        # torques = p_gains * (actions_scaled + self.default_dof_pos - self.dof_pos + self.motor_zero_offsets) - d_gains * self.dof_vel
+        torques = p_gains * (actions_scaled + self.target_dof_pos - self.dof_pos + self.motor_zero_offsets) - d_gains * self.dof_vel#chage to use target_dof_pos as default
+        # (self.dof_pos - self.last_dof_pos)/self.dt
+
+        # print(self.dof_pos)
+        # print(self.dof_vel)
+        # self.dof_vel
+
+        torques *= self.torque_multiplier
+
+        # torques *= self.motor_strength
+        return torch.clip(torques, -self.torque_limits, self.torque_limits)
+
 # ================================================ Rewards ================================================== #
     def _reward_no_fly(self):
         contacts = self.contact_forces[:, self.feet_indices, 2] > 0.1
@@ -382,7 +453,11 @@ class G1DacneFreeEnv(LeggedRobot):
         foot_speed_norm = torch.norm(self.rigid_state[:, self.feet_indices, 7:9], dim=2)
         rew = torch.sqrt(foot_speed_norm)
         rew *= contact
-        return torch.sum(rew, dim=1)   
+        return torch.sum(rew, dim=1)
+
+    def _reward_slippage(self):
+        foot_vel = self._rigid_body_vel[:, self.feet_indices]
+        return torch.sum(torch.norm(foot_vel, dim=-1) * (torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) > 1.), dim=1)
     
     def _reward_feet_clearance(self):
         """
@@ -471,7 +546,15 @@ class G1DacneFreeEnv(LeggedRobot):
     def _reward_action_rate(self):
         # Penalize changes in actions
         return torch.sum(torch.square(self.last_actions - self.actions), dim=1)
-    
+
+    def _reward_lower_action_rate(self):
+        # Penalize changes in actions
+        return torch.sum(torch.square(self.last_actions[:, :12] - self.actions[:, :12]), dim=1)
+
+    def _reward_upper_action_rate(self):
+        # Penalize changes in actions
+        return torch.sum(torch.square(self.last_actions[:, 12:] - self.actions[:, 12:]), dim=1)
+
     def _reward_collision(self):
         # Penalize collisions on selected bodies
         return torch.sum(1.*(torch.norm(self.contact_forces[:, self.penalised_contact_indices, :], dim=-1) > 0.1), dim=1)
@@ -553,6 +636,17 @@ class G1DacneFreeEnv(LeggedRobot):
         error = torch.sum(torch.abs(self.target_dof_pos - self.dof_pos), dim=1)  # (N,)
         return torch.exp(-0.7 * error)
 
+    def _reward_dof_vel_tracking(self):
+        diff_dof_vel = self.target_dof_vel - self.dof_vel
+        # scale the diff by self.cfg.rewards.teleop_joint_pos_selection
+        # for joint_name, scale in self.cfg.rewards.teleop_joint_pos_selection.items():
+        #     joint_index = self.dof_names.index(joint_name)
+        #     assert joint_index >= 0, f"Joint {joint_name} not found in the robot"
+        #     diff_dof_vel[:, joint_index] *= scale ** .5
+        diff_dof_vel_dist = torch.mean(torch.square(diff_dof_vel), dim=1)
+        return torch.exp(-0.7* diff_dof_vel_dist)
+
+
     def _reward_keypoint_position(self):
         """
         Keypoint Position Reward:
@@ -560,9 +654,20 @@ class G1DacneFreeEnv(LeggedRobot):
         keypoint_pos, target_keypoint_pos: shape (N, num_bodies, 3)
         loss pelvis_contour_link, head_link, left_rubber_hand, logo_link, right_rubber_hand
         """
-        error = torch.norm(self.target_body_pos - self.rigid_state[:, :, :3], dim=2)  # (N, num_bodies, 3)
-        error = torch.mean(error, dim=1)  # shape: (N,)
-        return torch.exp(-error)
+        # keypoint_indices = -17
+        # keypoint_indices = 0
+        # body_rot = self.rigid_state[:, keypoint_indices:, 9:13]
+        error = torch.norm(self.target_body_pos[:, :, :] - self.rigid_state[:, :, :3], dim=2)  # (N, num_bodies, 3)
+        # error = torch.norm(self.target_body_pos[:, keypoint_indices:, :] - self.rigid_state[:, keypoint_indices, :3], dim=2)
+        lower_error_mean = torch.mean(error[:, :17], dim=1)
+        upper_error_mean = torch.mean(error[:, 17:], dim=1)
+        reward_lower = torch.exp(-0.7 * lower_error_mean)
+        reward_upper = torch.exp(-1.2 * upper_error_mean)
+
+        reward = reward_lower + reward_upper
+        return reward
+        # error = torch.mean(error, dim=1)  # shape: (N,)
+        # return torch.exp(error)
 
     def _reward_lin_velocity(self):
         """
@@ -572,6 +677,16 @@ class G1DacneFreeEnv(LeggedRobot):
         """
         target_base_lin_vel = self.target_body_lin_vel[:, 0, :].squeeze(1)
         error = torch.norm(target_base_lin_vel - self.base_lin_vel, dim=1)  # (N,)
+        return torch.exp(-4.0 * error)
+
+    def _reward_ang_velocity(self):
+        """F
+        Linear Velocity Reward:
+        r_linVel = 6.0 * exp( -4.0 * ||v_ref - v|| )
+        base_lin_vel, target_lin_vel: shape (N, 3)
+        """
+        target_base_ang_vel = self.target_body_ang_vel[:, 0, :].squeeze(1)
+        error = torch.norm(target_base_ang_vel - self.base_ang_vel, dim=1)  # (N,)
         return torch.exp(-4.0 * error)
 
     def _reward_vel_direction(self):
@@ -604,3 +719,10 @@ class G1DacneFreeEnv(LeggedRobot):
         """
         error = torch.abs(self.target_root_euler[:, 2] - self.base_euler_xyz[:, 2])  # (N,)
         return torch.exp(-error)
+
+    def _reward_stumble(self):
+        # Penalize feet hitting vertical surfaces
+        return torch.any(torch.norm(self.contact_forces[:, self.feet_indices, :2], dim=2) >\
+             5 *torch.abs(self.contact_forces[:, self.feet_indices, 2]), dim=1)
+
+

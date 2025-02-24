@@ -102,7 +102,7 @@ def play(args):
     robot_index = -1 # which robot is used for logging
     joint_index = 3 # which joint is used for logging
     # stop_state_log = 1200 # number of steps before plotting states
-    stop_state_log = 1500  # number of steps before plotting states
+    stop_state_log = 350  # number of steps before plotting states
     if RENDER:
         camera_properties = gymapi.CameraProperties()
         camera_properties.width = 1920
@@ -130,7 +130,8 @@ def play(args):
 
     for i in tqdm(range(stop_state_log)):
 
-        actions = policy(obs.detach())*0
+        actions = policy(obs.detach())
+        actions[:, 12:] = 0.0
         # print(actions)
         # if FIX_COMMAND:
         #     env.commands[:, 0] = -0.  # 1.0

@@ -10,17 +10,17 @@ class G1DacneCfg(LeggedRobotCfg):
         frame_stack = 15
         c_frame_stack = 1
         # num_single_obs = 45
-        num_single_obs = 96 + 29 - 3
+        num_single_obs = 96 + 29 - 3 + 77
         num_observations = int(frame_stack * num_single_obs)
         # single_num_privileged_obs = 86
-        single_num_privileged_obs = 154 + 29 - 3
+        single_num_privileged_obs = 154 + 29 - 3 + 77
         # + 187
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
         # num_actions = 12
         num_actions = 29
         num_envs = 4096
         # episode_length_s = 24     # episode length in seconds
-        episode_length_s = 30  # episode length in seconds
+        episode_length_s = 7  # episode length in seconds
         use_ref_actions = False   # speed up training by using reference actions
         motion_file = 'humanoid/envs/custom/motions/skeleton_data.npz'
 
@@ -37,7 +37,7 @@ class G1DacneCfg(LeggedRobotCfg):
         foot_name = "ankle_roll"
         knee_name = "knee"
         penalize_contacts_on = ["hip", "knee"]
-        terminate_after_contacts_on = ["pelvis"]
+        terminate_after_contacts_on = ["pelvis", "torso", "elbow"]
         self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
         replace_cylinder_with_capsule = False
@@ -284,12 +284,46 @@ class G1DacneCfg(LeggedRobotCfg):
             # torque_limits = -0.01
 
             action_rate = -0.08
-            dof_position = 3.0
-            keypoint_position = 2.0
+            dof_position = 3.0*10
+            keypoint_position = 2.0*10
             lin_velocity = 6.0
             vel_direction = 6.0
             roll_pitch = 1.0
             yaw = 1.0
+
+            # termination = -10.
+            # feet_contact_forces = -0.10 * 1.25
+            # # stumble = -1000.0 * 1.25
+            # # default_joint_pos = 2.8
+            # feet_contact_number = 0.0
+            # foot_slip = -0.1
+            # # slippage = -30.0 * 1.25
+            # feet_clearance = 0.02
+            # # tracking_lin_vel = 3.0
+            # # tracking_ang_vel = 2.5
+            # ang_vel_xy = -0.5
+            # torques = -5.e-8
+            # dof_acc = -5.e-8
+            # dof_vel = -5.e-7
+            # lin_vel_z = -1.8
+            # feet_air_time = 0.
+            # orientation = -3.0
+            # dof_pos_limits = -10.0
+            # # base_height = -20.0
+            # no_fly = 0.0
+            # torque_limits = -0.02
+            #
+            # action_rate = -0.08
+            # # lower_action_rate = -0.9 * 1.25  # -0.6  # -0.3 # -0.3 -0.12 -0.01
+            # # upper_action_rate = -0.05 * 1.25  # -0.6  # -0.3 # -0.3 -0.12 -0.01
+            # dof_position = 3.0
+            # dof_vel_tracking = 3.0
+            # keypoint_position = 3.0
+            # lin_velocity = 6.0
+            # ang_velocity = 6.0
+            # vel_direction = 6.0
+            # roll_pitch = 1.0
+            # yaw = 1.0
 
 
 
