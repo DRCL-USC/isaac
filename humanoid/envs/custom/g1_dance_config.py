@@ -10,17 +10,17 @@ class G1DacneCfg(LeggedRobotCfg):
         frame_stack = 15
         c_frame_stack = 1
         # num_single_obs = 45
-        num_single_obs = 96 + 29 - 3 + 77
+        num_single_obs = 125
         num_observations = int(frame_stack * num_single_obs)
         # single_num_privileged_obs = 86
-        single_num_privileged_obs = 154 + 29 - 3 + 77
+        single_num_privileged_obs = 154 + 29 - 3 + 77 + 3
         # + 187
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
         # num_actions = 12
         num_actions = 29
         num_envs = 4096
         # episode_length_s = 24     # episode length in seconds
-        episode_length_s = 7  # episode length in seconds
+        episode_length_s = 20  # episode length in seconds
         use_ref_actions = False   # speed up training by using reference actions
         motion_file = 'humanoid/envs/custom/motions/skeleton_data.npz'
 
@@ -284,8 +284,9 @@ class G1DacneCfg(LeggedRobotCfg):
             # torque_limits = -0.01
 
             action_rate = -0.08
-            dof_position = 3.0*10
+            dof_position = 3.0*8
             keypoint_position = 2.0*10
+            torso_position = 40.0
             lin_velocity = 6.0
             vel_direction = 6.0
             roll_pitch = 1.0
@@ -364,7 +365,7 @@ class G1DacneCfgPPO(LeggedRobotCfgPPO):
         policy_class_name = 'ActorCritic'
         algorithm_class_name = 'PPO'
         num_steps_per_env = 60  # per iteration
-        max_iterations = 10001  # number of policy updates
+        max_iterations = 15001  # number of policy updates
 
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.
