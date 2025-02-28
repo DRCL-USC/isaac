@@ -11,7 +11,7 @@ from humanoid.utils.terrain import  HumanoidTerrain
 
 class Go2wFreeEnv(LeggedRobot):
     '''
-    HectorFreeEnv is a class that represents a custom environment for a legged robot.
+    Go2wFreeEnv is a class that represents a custom environment for a legged robot.
 
     Args:
         cfg (LeggedRobotCfg): Configuration object for the legged robot.
@@ -46,7 +46,7 @@ class Go2wFreeEnv(LeggedRobot):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
         self.last_feet_z = 0.05
-        self.feet_height = torch.zeros((self.num_envs, 2), device=self.device)
+        self.feet_height = torch.zeros((self.num_envs, 4), device=self.device)
         self.reset_idx(torch.tensor(range(self.num_envs), device=self.device))
         self.compute_observations()
 
@@ -77,11 +77,15 @@ class Go2wFreeEnv(LeggedRobot):
         phase = self._get_phase()
         sin_pos = torch.sin(2 * torch.pi * phase)
         # Add double support phase
-        stance_mask = torch.zeros((self.num_envs, 2), device=self.device)
-        # left foot stance
+        stance_mask = torch.zeros((self.num_envs, 4), device=self.device)
+        # front-left foot stance
         stance_mask[:, 0] = sin_pos >= 0
-        # right foot stance
+        # front-right foot stance
         stance_mask[:, 1] = sin_pos < 0
+        # back-left foot stance
+        stance_mask[:, 2] = sin_pos < 0
+        # back-right foot stance
+        stance_mask[:, 3] = sin_pos >= 0
         # Double support phase
         stance_mask[torch.abs(sin_pos) < 0.1] = 1
 
@@ -177,7 +181,7 @@ class Go2wFreeEnv(LeggedRobot):
         sin_pos = torch.sin(2 * torch.pi * phase).unsqueeze(1) # (4096, 1)
         cos_pos = torch.cos(2 * torch.pi * phase).unsqueeze(1) # (4096, 1)
 
-        stance_mask = self._get_gait_phase() # (4096, 2)
+        stance_mask = self._get_gait_phase() # (4096, 4)
         contact_mask = self.contact_forces[:, self.feet_indices, 2] > 1. # (4096, 4)
 
         self.command_input = self.commands[:, :3] * self.commands_scale # (4096, 3)
@@ -205,7 +209,7 @@ class Go2wFreeEnv(LeggedRobot):
             self.env_frictions,  # 1
             # self.cfg.domain_rand.action_noise, # 1
             self.body_mass,  # 1
-            # stance_mask,  # 2
+            # stance_mask,  # 4
             contact_mask,  # 4
         ), dim=-1) # (4096, 98)
         obs_buf = torch.cat((
@@ -234,7 +238,7 @@ class Go2wFreeEnv(LeggedRobot):
                 self.rand_push_torque,  # 3
                 self.env_frictions,  # 1
                 self.body_mass,  # 1
-                # stance_mask,  # 2
+                # stance_mask,  # 4
                 contact_mask,
                 self._get_heights()), dim=-1)
 

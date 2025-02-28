@@ -32,7 +32,7 @@ class Go2wCfg(LeggedRobotCfg):
         foot_name = "foot"
         knee_name = "calf"
 
-        terminate_after_contacts_on = ['base', 'thigh', 'hip', 'calf', 'Head_lower']
+        terminate_after_contacts_on = ['base', 'thigh', 'hip', 'Head_lower']
         # terminate_after_contacts_on = ['base']
         # penalize_contacts_on = ["base", "thigh"]
         penalize_contacts_on = ["thigh", "calf"]
@@ -55,7 +55,7 @@ class Go2wCfg(LeggedRobotCfg):
         num_cols = 20  # number of terrain cols (types)
         max_init_terrain_level = 10  # starting curriculum state
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
-        terrain_proportions = [0, 0.2, 0.2, 0.1, 0.1, 0.2, 0.2]
+        terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
         restitution = 0.
 
     class noise:
@@ -71,7 +71,7 @@ class Go2wCfg(LeggedRobotCfg):
             height_measurements = 0.1
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.34]
+        pos = [0.0, 0.0, 0.45]
 
         default_joint_angles = {  # = target angles [rad] when action = 0.0
             'FL_hip_joint': 0.,
@@ -165,10 +165,10 @@ class Go2wCfg(LeggedRobotCfg):
         max_contact_force = 180  # Forces above this value are penalized
 
         class scales:
-            termination = -200.
+            termination = 10.
             default_joint_pos = 2.0
-            foot_slip = -0.
-            feet_clearance = 0.0
+            foot_slip = -1.
+            feet_clearance = 1.0
             tracking_lin_vel = 4.5
             tracking_ang_vel = 3.8
             ang_vel_xy = -0.8
