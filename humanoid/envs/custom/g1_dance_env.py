@@ -14,24 +14,12 @@ from humanoid.envs.custom.motions.motion_loader import MotionLoader
 
 
 
-# def get_euler_xyz_tensor(quat):
-#     r, p, w = get_euler_xyz(quat)
-#     # stack r, p, w in dim1
-#     euler_xyz = torch.stack((r, p, w), dim=1)
-#     euler_xyz[euler_xyz > np.pi] -= 2 * np.pi
-#     return euler_xyz
 def get_euler_xyz_tensor(quat):
     r, p, w = get_euler_xyz(quat)
-    if not isinstance(r, torch.Tensor):
-        r = torch.tensor(r, device=quat.device, dtype=torch.float32)
-    if not isinstance(p, torch.Tensor):
-        p = torch.tensor(p, device=quat.device, dtype=torch.float32)
-    if not isinstance(w, torch.Tensor):
-        w = torch.tensor(w, device=quat.device, dtype=torch.float32)
+    # stack r, p, w in dim1
     euler_xyz = torch.stack((r, p, w), dim=1)
-    euler_xyz = torch.where(euler_xyz > np.pi, euler_xyz - 2 * np.pi, euler_xyz)
+    euler_xyz[euler_xyz > np.pi] -= 2 * np.pi
     return euler_xyz
-
 
 class G1DacneFreeEnv(LeggedRobot):
     '''
@@ -209,12 +197,9 @@ class G1DacneFreeEnv(LeggedRobot):
         # control_dt = 0.02
         control_dt = self.dt
         self.demo_time += control_dt
-        # effective_demo_time = torch.where(self.demo_time < 0.2,
-        #                                   torch.zeros_like(self.demo_time),
-        #                                   self.demo_time)
         effective_demo_time = torch.where(self.demo_time < 0.2,
                                           torch.zeros_like(self.demo_time),
-                                          self.demo_time - 0.2)
+                                          self.demo_time)
         effective_demo_time = torch.where(effective_demo_time > self._motion_loader.duration,
                                           torch.zeros_like(effective_demo_time),
                                           effective_demo_time)
@@ -304,9 +289,6 @@ class G1DacneFreeEnv(LeggedRobot):
         target_root_quat = self.target_body_rot[:, 0, :]
         self.target_root_euler = get_euler_xyz_tensor(target_root_quat)
         phase = self._get_phase()
-        self.torso_state = self.rigid_state[:, self.torso_idx]
-        torso_quat = self.torso_state[:, 3:7]
-        torso_euler = get_euler_xyz_tensor(torso_quat)
         self.compute_ref_state()
 
         sin_pos = torch.sin(2 * torch.pi * phase).unsqueeze(1)
@@ -344,7 +326,6 @@ class G1DacneFreeEnv(LeggedRobot):
             self.base_lin_vel * self.obs_scales.lin_vel,  # 3
             self.base_ang_vel * self.obs_scales.ang_vel,  # 3
             self.base_euler_xyz * self.obs_scales.quat,  # 3
-            torso_euler * self.obs_scales.quat, #3
             torch.flatten(self.rigid_state[:, self.feet_indices, :3], start_dim=1, end_dim=2),
             torch.flatten(self.rigid_state[:, self.feet_indices, 7:10], start_dim=1, end_dim=2),
             self.root_states[:, :3], # 3
@@ -368,11 +349,10 @@ class G1DacneFreeEnv(LeggedRobot):
             self.actions,   # 12D
             self.base_ang_vel * self.obs_scales.ang_vel,  # 3
             self.base_euler_xyz * self.obs_scales.quat,  # 3
-            torso_euler * self.obs_scales.quat, #3
             self.target_dof_pos,  # 29
-            # self.target_keypoint_pos.view(-1, 24),  # 24
-            # (self.keypoint_pos - self.target_keypoint_pos).view(-1, 24),  # 24
-            # self.target_dof_vel,  # 29
+            self.target_keypoint_pos.view(-1, 24),  # 24
+            (self.keypoint_pos - self.target_keypoint_pos).view(-1, 24),  # 24
+            self.target_dof_vel,  # 29
         ), dim=-1)
         # print(self.measured_heights.size())
         # if self.cfg.terrain.measure_heights:
@@ -679,23 +659,15 @@ class G1DacneFreeEnv(LeggedRobot):
         # body_rot = self.rigid_state[:, keypoint_indices:, 9:13]
         error = torch.norm(self.target_body_pos[:, :, :] - self.rigid_state[:, :, :3], dim=2)  # (N, num_bodies, 3)
         # error = torch.norm(self.target_body_pos[:, keypoint_indices:, :] - self.rigid_state[:, keypoint_indices, :3], dim=2)
-        # lower_error_mean = torch.sum(error[:, :17], dim=1)
-        # upper_error_mean = torch.sum(error[:, 17:], dim=1)
-        # reward_lower = torch.exp(-0.7 * lower_error_mean)
-        # reward_upper = torch.exp(-1.2 * upper_error_mean)
-        reward_lower = torch.sum(torch.exp(-0.7 * error[:, :17]), dim=1)
-        reward_upper = torch.sum(torch.exp(-1.2 * error[:, 17:]), dim=1)
-        reward = reward_lower + reward_upper
+        lower_error_mean = torch.mean(error[:, :17], dim=1)
+        upper_error_mean = torch.mean(error[:, 17:], dim=1)
+        reward_lower = torch.exp(-0.7 * lower_error_mean)
+        reward_upper = torch.exp(-1.2 * upper_error_mean)
 
-        # reward = reward_lower + reward_upper
+        reward = reward_lower + reward_upper
         return reward
         # error = torch.mean(error, dim=1)  # shape: (N,)
         # return torch.exp(error)
-
-    def _reward_torso_position(self):
-        error = torch.norm(self.target_body_pos[:, self.torso_idx, :] - self.torso_state[:, :3], dim=1)  # (N, 3)
-        error = torch.mean(error)
-        return torch.exp(-0.12*error)
 
     def _reward_lin_velocity(self):
         """
