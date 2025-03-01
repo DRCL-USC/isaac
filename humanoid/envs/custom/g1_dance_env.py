@@ -350,9 +350,9 @@ class G1DacneFreeEnv(LeggedRobot):
             self.base_ang_vel * self.obs_scales.ang_vel,  # 3
             self.base_euler_xyz * self.obs_scales.quat,  # 3
             self.target_dof_pos,  # 29
-            self.target_keypoint_pos.view(-1, 24),  # 24
-            (self.keypoint_pos - self.target_keypoint_pos).view(-1, 24),  # 24
-            self.target_dof_vel,  # 29
+            # self.target_keypoint_pos.view(-1, 24),  # 24
+            # (self.keypoint_pos - self.target_keypoint_pos).view(-1, 24),  # 24
+            # self.target_dof_vel,  # 29
         ), dim=-1)
         # print(self.measured_heights.size())
         # if self.cfg.terrain.measure_heights:
