@@ -264,7 +264,7 @@ class G1DacneCfg(LeggedRobotCfg):
         max_contact_force = 600  # Forces above this value are penalized
 
         class scales:
-            termination = -1.
+            termination = -50.
             # default_joint_pos = 2.8
             feet_contact_number = 0.0
             foot_slip = -0.1
@@ -276,7 +276,7 @@ class G1DacneCfg(LeggedRobotCfg):
             dof_acc = -5.e-8
             lin_vel_z = -1.8
             feet_air_time = 0.
-            orientation = -3.0
+            orientation = -7.0
             dof_pos_limits = -10.0
             # base_height = -20.0
             no_fly = 0.0
@@ -286,6 +286,7 @@ class G1DacneCfg(LeggedRobotCfg):
             action_rate = -0.08
             dof_position = 3.0*10
             keypoint_position = 2.0*10
+            torso_position = 70.0
             lin_velocity = 6.0
             vel_direction = 6.0
             roll_pitch = 1.0
