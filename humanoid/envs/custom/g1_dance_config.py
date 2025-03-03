@@ -280,7 +280,7 @@ class G1DacneCfg(LeggedRobotCfg):
             dof_pos_limits = -10.0
             # base_height = -20.0
             no_fly = 0.0
-            dof_vel = -5.e-7
+            dof_vel =-5.e-6 #-5.e-7
             # torque_limits = -0.01
 
             action_rate = -0.08

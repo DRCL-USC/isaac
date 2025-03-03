@@ -431,6 +431,15 @@ class G1DacneFreeEnv(LeggedRobot):
         # torques *= self.motor_strength
         return torch.clip(torques, -self.torque_limits, self.torque_limits)
 
+    def check_termination(self):
+        """ Check if environments need to be reset
+        """
+        self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1., dim=1)
+        torso_offset = torch.norm(self.target_body_pos[:, self.torso_idx, :] - self.torso_state[:, :3], dim=1)
+        self.reset_buf |= torso_offset > 0.5
+        self.time_out_buf = self.episode_length_buf > self.max_episode_length # no terminal reward for time-outs
+        self.reset_buf |= self.time_out_buf
+
 # ================================================ Rewards ================================================== #
     def _reward_no_fly(self):
         contacts = self.contact_forces[:, self.feet_indices, 2] > 0.1
