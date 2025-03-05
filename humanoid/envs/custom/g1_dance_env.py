@@ -72,10 +72,12 @@ class G1DacneFreeEnv(LeggedRobot):
         self.keypoint_rot = torch.zeros((self.num_envs, self.num_bodies, 4), device=self.device)
         self.keypoint_lin_vel = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
         self.keypoint_ang_vel = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
+        self.initial_target_keypoint_pos = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
         self.last_feet_z = 0.05
         self.feet_height = torch.zeros((self.num_envs, 2), device=self.device)
         self.reset_idx(torch.tensor(range(self.num_envs), device=self.device))
         self.compute_observations()
+        self.get_target_init_pos()
 
 
     def _push_robots(self):
@@ -192,6 +194,13 @@ class G1DacneFreeEnv(LeggedRobot):
     #     demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = \
     #         self._motion_loader.sample(num_samples=self.num_envs, times=demo_time_np)
     #     return demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel
+    def get_target_init_pos(self):
+        demo_body_pos = self._motion_loader.sample(num_samples=self.num_envs, times=0.0)[2]
+        demo_body_pos = demo_body_pos.unsqueeze(0)
+        skip_indices = {7, 17, 25, 26, 34}
+        keep_indices = [i for i in range(demo_body_pos.shape[1]) if i not in skip_indices]
+        self.initial_target_keypoint_pos = demo_body_pos[:, keep_indices, ...]
+
 
     def sample_motion_data(self):
         # control_dt = 0.02
@@ -242,18 +251,12 @@ class G1DacneFreeEnv(LeggedRobot):
         demo_body_lin_vel = demo_body_lin_vel[:, keep_indices, ...]
         demo_body_ang_vel = demo_body_ang_vel[:, keep_indices, ...]
 
-        demo_body_pos += self.initial_rigid_states[:, :, 0:3]
-
-        #
-        # print("demo_body_pos shape:", demo_body_pos.shape) #(30, 3)
-        # print("demo_body_rot shape:", demo_body_rot.shape) #(30, 4)
-        # print("demo_body_lin_vel shape:", demo_body_lin_vel.shape) #(30, 3)
-        # print("demo_body_ang_vel shape:", demo_body_ang_vel.shape) #(30, 3)
+        demo_body_pos = demo_body_pos + self.initial_rigid_states[:, :, 0:3] - self.initial_target_keypoint_pos
+        # demo_body_pos = self.initial_rigid_states[:, :, 0:3]
 
         return demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel
 
     def step(self, actions):
-
         # demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = self.sample_motion_data()
         # # self.demo_body_pos = demo_body_pos
         # self.target_dof_pos = demo_dof_pos[:, -29:]
