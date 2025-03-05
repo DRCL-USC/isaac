@@ -276,7 +276,7 @@ class G1DacneCfg(LeggedRobotCfg):
             dof_acc = -5.e-8
             lin_vel_z = -1.8
             feet_air_time = 0.
-            orientation = -7.0
+            orientation = -10.0
             dof_pos_limits = -10.0
             # base_height = -20.0
             no_fly = 0.0

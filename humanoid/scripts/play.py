@@ -102,7 +102,7 @@ def play(args):
     robot_index = -1 # which robot is used for logging
     joint_index = 3 # which joint is used for logging
     # stop_state_log = 1200 # number of steps before plotting states
-    stop_state_log = 30*50  # number of steps before plotting states
+    stop_state_log = 50*50  # number of steps before plotting states
     if RENDER:
         camera_properties = gymapi.CameraProperties()
         camera_properties.width = 1920

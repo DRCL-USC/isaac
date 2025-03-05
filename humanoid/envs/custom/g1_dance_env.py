@@ -242,6 +242,8 @@ class G1DacneFreeEnv(LeggedRobot):
         demo_body_lin_vel = demo_body_lin_vel[:, keep_indices, ...]
         demo_body_ang_vel = demo_body_ang_vel[:, keep_indices, ...]
 
+        demo_body_pos += self.initial_rigid_states[:, :, 0:3]
+
         #
         # print("demo_body_pos shape:", demo_body_pos.shape) #(30, 3)
         # print("demo_body_rot shape:", demo_body_rot.shape) #(30, 4)
@@ -436,7 +438,7 @@ class G1DacneFreeEnv(LeggedRobot):
         """
         self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1., dim=1)
         torso_offset = torch.norm(self.target_body_pos[:, self.torso_idx, :] - self.torso_state[:, :3], dim=1)
-        self.reset_buf |= torso_offset > 0.5
+        self.reset_buf |= torso_offset > 1.5
         self.time_out_buf = self.episode_length_buf > self.max_episode_length # no terminal reward for time-outs
         self.reset_buf |= self.time_out_buf
 
@@ -657,7 +659,8 @@ class G1DacneFreeEnv(LeggedRobot):
                                     dim=1)  # (N, 3)
 
         error = torch.mean(error)
-        return torch.exp(-0.12 * error)
+        reward = torch.exp(-0.7 * error)
+        return reward
 
     def _reward_dof_vel_tracking(self):
         diff_dof_vel = self.target_dof_vel - self.dof_vel
@@ -681,18 +684,16 @@ class G1DacneFreeEnv(LeggedRobot):
         # keypoint_indices = 0
         # body_rot = self.rigid_state[:, keypoint_indices:, 9:13]
         # self.keypoint_pos - self.target_keypoint_pos
-        error = torch.norm(self.keypoint_pos - self.target_keypoint_pos, dim=2)  # (N, num_bodies, 3)
-        # error = torch.norm(self.target_body_pos[:, :, :] - self.rigid_state[:, :, :3], dim=2)  # (N, num_bodies, 3)
-        # error = torch.norm(self.target_body_pos[:, keypoint_indices:, :] - self.rigid_state[:, keypoint_indices, :3], dim=2)
-        # lower_error_mean = torch.mean(error[:, :17], dim=1)
-        # upper_error_mean = torch.mean(error[:, 17:], dim=1)
-        # reward_lower = torch.exp(-0.7 * lower_error_mean)
-        # reward_upper = torch.exp(-1.2 * upper_error_mean)
-        #
-        # reward = reward_lower + reward_upper
-        # return reward
-        error = torch.mean(error, dim=1)  # shape: (N,)
-        return torch.exp(-0.7*error)
+        # error = torch.norm(self.keypoint_pos - self.target_keypoint_pos, dim=2)  # (N, num_bodies, 3)
+        error = torch.norm(self.target_body_pos[:, :, :] - self.rigid_state[:, :, :3], dim=2)  # (N, num_bodies, 3)
+        lower_error_mean = torch.mean(error[:, :17], dim=1)
+        upper_error_mean = torch.mean(error[:, 17:], dim=1)
+        reward_lower = torch.exp(-0.5 * lower_error_mean)
+        reward_upper = torch.exp(-1.2 * upper_error_mean)
+        reward = reward_lower + reward_upper
+        return reward
+        # error = torch.mean(error, dim=1)  # shape: (N,)
+        # return torch.exp(-0.7*error)
 
     def _reward_lin_velocity(self):
         """

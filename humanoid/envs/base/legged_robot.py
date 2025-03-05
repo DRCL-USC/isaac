@@ -188,6 +188,9 @@ class LeggedRobot(BaseTask):
 
         self._resample_commands(env_ids)
 
+        #reset initial_rigid_staete
+        self.initial_rigid_states[env_ids, :, :] = self.rigid_state[env_ids, :, :].clone()
+
         # reset buffers
         self.last_last_actions[env_ids] = 0.
         self.actions[env_ids] = 0.
@@ -515,6 +518,7 @@ class LeggedRobot(BaseTask):
 
         self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(self.num_envs, -1, 3) # shape: num_envs, num_bodies, xyz axis
         self.rigid_state = gymtorch.wrap_tensor(rigid_body_state).view(self.num_envs, -1, 13)
+        self.initial_rigid_states = self.rigid_state.clone()
         self.torso_idx = self.gym.find_actor_rigid_body_handle(self.envs[0], self.actor_handles[0], "torso")
         self.torso_state = self.rigid_state[:, self.torso_idx]
         # initialize some data used later on
