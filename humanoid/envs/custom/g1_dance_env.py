@@ -251,7 +251,7 @@ class G1DacneFreeEnv(LeggedRobot):
         demo_body_lin_vel = demo_body_lin_vel[:, keep_indices, ...]
         demo_body_ang_vel = demo_body_ang_vel[:, keep_indices, ...]
 
-        demo_body_pos = demo_body_pos + self.initial_rigid_states[:, :, 0:3] - self.initial_target_keypoint_pos
+        demo_body_pos = demo_body_pos + self.init_rigid_states[:, :, 0:3] - self.initial_target_keypoint_pos
         # demo_body_pos = self.initial_rigid_states[:, :, 0:3]
 
         return demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel
@@ -407,6 +407,7 @@ class G1DacneFreeEnv(LeggedRobot):
             self.obs_history[i][env_ids] *= 0
         for i in range(self.critic_history.maxlen):
             self.critic_history[i][env_ids] *= 0
+
 
     def _compute_torques(self, actions):
         """ Compute torques from actions.
