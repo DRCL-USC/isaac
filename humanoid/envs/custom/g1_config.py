@@ -21,17 +21,18 @@ class G1Cfg(LeggedRobotCfg):
 
     class safety:
         # safety factors
-        pos_limit = 0.85
+        pos_limit = 0.7
         vel_limit = 0.7
         torque_limit = 0.85
 
     class asset(LeggedRobotCfg.asset):
-        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1_description/g1_12dof.urdf'
-        name = "g1"
+        # file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1_description/g1_12dof.urdf'
+        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/Motion1/m1.urdf'
+        name = "m1"
         foot_name = "ankle_roll"
         knee_name = "knee"
         penalize_contacts_on = ["hip", "knee"]
-        terminate_after_contacts_on = ["pelvis"]
+        terminate_after_contacts_on = ["pelvis", "hip_yaw"]
         self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
         replace_cylinder_with_capsule = False
@@ -67,17 +68,17 @@ class G1Cfg(LeggedRobotCfg):
             height_measurements = 0.1
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.8] # x,y,z [m]
+        pos = [0.0, 0.0, 1.0] # x,y,z [m]
         default_joint_angles = { # = target angles [rad] when action = 0.0
            'left_hip_yaw_joint' : 0. ,   
            'left_hip_roll_joint' : 0,               
-           'left_hip_pitch_joint' : -0.1,         
+           'left_hip_pitch_joint' : -0.25,         
            'left_knee_joint' : 0.2,       
            'left_ankle_pitch_joint' : -0.1,     
            'left_ankle_roll_joint' : 0,     
            'right_hip_yaw_joint' : 0., 
            'right_hip_roll_joint' : 0, 
-           'right_hip_pitch_joint' : -0.1,                                       
+           'right_hip_pitch_joint' : -0.25,                                       
            'right_knee_joint' : 0.2,                                             
            'right_ankle_pitch_joint': -0.1,                              
            'right_ankle_roll_joint' : 0,       
@@ -188,7 +189,7 @@ class G1Cfg(LeggedRobotCfg):
             heading = [-3.14, 3.14]
 
     class rewards:
-        base_height_target = 0.75
+        base_height_target = 0.9
         min_dist = 0.1
         max_dist = 0.5
         # put some settings here for LLM parameter tuning
@@ -204,9 +205,9 @@ class G1Cfg(LeggedRobotCfg):
         class scales:
             termination = -0.
             default_joint_pos = 2.8
-            feet_contact_number = 1.0
+            feet_contact_number = 1.5
             foot_slip = -0.1
-            feet_clearance = 0.02
+            feet_clearance = 0.05
             tracking_lin_vel = 3.0
             tracking_ang_vel = 2.5
             ang_vel_xy = -0.5
@@ -221,7 +222,7 @@ class G1Cfg(LeggedRobotCfg):
             dof_vel = -5.e-7
             # torque_limits = -0.01
 
-            action_rate = -0.08
+            action_rate = -0.05
 
     class normalization:
         class obs_scales:
