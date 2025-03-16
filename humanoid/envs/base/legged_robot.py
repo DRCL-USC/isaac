@@ -100,7 +100,6 @@ class LeggedRobot(BaseTask):
                 self.gym.fetch_results(self.sim, True)
             self.gym.refresh_dof_state_tensor(self.sim)
         self.post_physics_step()
-
         # return clipped obs, clipped states (None), rewards, dones and infos
         clip_obs = self.cfg.normalization.clip_observations
         self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
@@ -116,6 +115,8 @@ class LeggedRobot(BaseTask):
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
         obs, privileged_obs, _, _, _ = self.step(torch.zeros(
             self.num_envs, self.num_actions, device=self.device, requires_grad=False))
+        self.init_rigid_states = self.rigid_state.clone()
+        # reset initial_rigid_staete
         return obs, privileged_obs
     
     def post_physics_step(self):
@@ -129,7 +130,6 @@ class LeggedRobot(BaseTask):
 
         self.episode_length_buf += 1
         self.common_step_counter += 1
-
         # prepare quantities
         self.base_quat[:] = self.root_states[:, 3:7]
         self.base_lin_vel[:] = quat_rotate_inverse(self.base_quat, self.root_states[:, 7:10])
@@ -155,6 +155,9 @@ class LeggedRobot(BaseTask):
 
         if self.viewer and self.enable_viewer_sync and self.debug_viz:
             self._draw_debug_vis()
+
+
+
 
     def check_termination(self):
         """ Check if environments need to be reset
@@ -217,7 +220,11 @@ class LeggedRobot(BaseTask):
         self.base_quat[env_ids] = self.root_states[env_ids, 3:7]
         self.base_euler_xyz = get_euler_xyz_tensor(self.base_quat)
         self.projected_gravity[env_ids] = quat_rotate_inverse(self.base_quat[env_ids], self.gravity_vec[env_ids])
-    
+
+
+
+
+
     def compute_reward(self):
         """ Compute rewards
             Calls each reward function which had a non-zero scale (processed in self._prepare_reward_function())
@@ -515,7 +522,9 @@ class LeggedRobot(BaseTask):
 
         self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(self.num_envs, -1, 3) # shape: num_envs, num_bodies, xyz axis
         self.rigid_state = gymtorch.wrap_tensor(rigid_body_state).view(self.num_envs, -1, 13)
-
+        self.init_rigid_states = torch.zeros(self.num_envs, 30, 13, dtype=torch.float, device=self.device, requires_grad=False)
+        self.torso_idx = self.gym.find_actor_rigid_body_handle(self.envs[0], self.actor_handles[0], "torso")
+        self.torso_state = self.rigid_state[:, self.torso_idx]
         # initialize some data used later on
         self.common_step_counter = 0
         self.extras = {}
@@ -694,6 +703,7 @@ class LeggedRobot(BaseTask):
 
         # save body names from the asset
         body_names = self.gym.get_asset_rigid_body_names(robot_asset)
+        self.body_names = body_names
         self.dof_names = self.gym.get_asset_dof_names(robot_asset)
         # print(self.dof_names)
         self.num_bodies = len(body_names)

@@ -1,0 +1,378 @@
+from humanoid.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
+
+
+class G1DacneCfg(LeggedRobotCfg):
+    """
+    Configuration class for the XBotL humanoid robot.
+    """
+    class env(LeggedRobotCfg.env):
+        # change the observation dim
+        frame_stack = 15
+        c_frame_stack = 1
+        # num_single_obs = 45
+        num_single_obs = 96 + 29 - 3
+        num_observations = int(frame_stack * num_single_obs)
+        # single_num_privileged_obs = 86
+        single_num_privileged_obs = 154 + 29 - 3 + 77
+        # + 187
+        num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
+        # num_actions = 12
+        num_actions = 29
+        num_envs = 8196
+        # episode_length_s = 24     # episode length in seconds
+        episode_length_s = 131  # episode length in seconds
+        use_ref_actions = False   # speed up training by using reference actions
+        motion_file = 'humanoid/envs/custom/motions/skeleton_data.npz'
+
+    class safety:
+        # safety factors
+        pos_limit = 0.95
+        vel_limit = 0.7
+        torque_limit = 0.85
+
+    class asset(LeggedRobotCfg.asset):
+        # file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1_description/g1_23dof_rev_1_0.urdf'
+        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1_description/g1_29dof_rev_1_0.urdf'
+        name = "g1"
+        foot_name = "ankle_roll"
+        knee_name = "knee"
+        penalize_contacts_on = ["hip", "knee"]
+        terminate_after_contacts_on = ["pelvis", "torso", "elbow"]
+        self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
+        flip_visual_attachments = False
+        replace_cylinder_with_capsule = False
+        fix_base_link = False
+        # fix_base_link = True
+
+    class terrain(LeggedRobotCfg.terrain):
+        mesh_type = 'plane'
+        # mesh_type = 'trimesh'
+        curriculum = False
+        # rough terrain only:
+        measure_heights = False
+        static_friction = 0.6
+        dynamic_friction = 0.6
+        terrain_length = 8.
+        terrain_width = 8.
+        num_rows = 20  # number of terrain rows (levels)
+        num_cols = 20  # number of terrain cols (types)
+        max_init_terrain_level = 10  # starting curriculum state
+        # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
+        terrain_proportions = [0.2, 0.2, 0.4, 0.1, 0.1, 0, 0]
+        restitution = 0.
+
+    class noise:
+        add_noise = True
+        noise_level = 1.0    # scales other values
+
+        class noise_scales:
+            dof_pos = 0.05
+            dof_vel = 0.5
+            ang_vel = 0.3
+            lin_vel = 0.05
+            quat = 0.1
+            height_measurements = 0.1
+
+    class init_state(LeggedRobotCfg.init_state):
+        pos = [0.0, 0.0, 0.8] # x,y,z [m]
+        # default_joint_angles = { # = target angles [rad] when action = 0.0
+        #    'left_hip_yaw_joint' : 0. ,
+        #    'left_hip_roll_joint' : 0,
+        #    'left_hip_pitch_joint' : -0.1,
+        #    'left_knee_joint' : 0.2,
+        #    'left_ankle_pitch_joint' : -0.1,
+        #    'left_ankle_roll_joint' : 0,
+        #    'right_hip_yaw_joint' : 0.,
+        #    'right_hip_roll_joint' : 0,
+        #    'right_hip_pitch_joint' : -0.1,
+        #    'right_knee_joint' : 0.2,
+        #    'right_ankle_pitch_joint': -0.1,
+        #    'right_ankle_roll_joint' : 0,
+        #    'torso_joint' : 0.
+        # }
+        default_joint_angles = {
+            'left_hip_yaw_joint': 0.0,
+            'left_hip_roll_joint': 0.0,
+            'left_hip_pitch_joint': -0.15,
+            'left_knee_joint': 0.3,
+            'left_ankle_pitch_joint': -0.15,
+            'left_ankle_roll_joint': 0.0,
+            'right_hip_yaw_joint': 0.0,
+            'right_hip_roll_joint': 0.0,
+            'right_hip_pitch_joint': -0.15,
+            'right_knee_joint': 0.3,
+            'right_ankle_pitch_joint': -0.15,
+            'right_ankle_roll_joint': 0.0,
+            'waist_yaw_joint': 0.0,
+            'waist_roll_joint': 0.0,
+            'waist_pitch_joint': 0.0,
+            'left_shoulder_pitch_joint': 0.0,
+            'left_shoulder_roll_joint': 1.57,
+            'left_shoulder_yaw_joint': 0.0,
+            'left_elbow_joint': 1.57,
+            'left_wrist_roll_joint': 0.0,
+            'left_wrist_pitch_joint': 0.0,
+            'left_wrist_yaw_joint': 0.0,
+            'right_shoulder_pitch_joint': 0.0,
+            'right_shoulder_roll_joint': -1.57,
+            'right_shoulder_yaw_joint': 0.0,
+            'right_elbow_joint': 1.57,
+            'right_wrist_roll_joint': 0.0,
+            'right_wrist_pitch_joint': 0.0,
+            'right_wrist_yaw_joint': 0.0,
+        }
+
+    class control(LeggedRobotCfg.control):
+          # PD Drive parameters:
+        # stiffness = {'hip_yaw': 100,
+        #              'hip_roll': 100,
+        #              'hip_pitch': 100,
+        #              'knee': 150,
+        #              'ankle': 40,
+        #              }  # [N*m/rad]
+        #
+        # damping = {  'hip_yaw': 2,
+        #              'hip_roll': 2,
+        #              'hip_pitch': 2,
+        #              'knee': 4,
+        #              'ankle': 2,
+        #              }  # [N*m/rad]  # [N*m*s/rad]
+        stiffness = {
+              'hip_yaw': 100,
+              'hip_roll': 100,
+              'hip_pitch': 100,
+              'knee': 150,
+              'ankle': 40,
+              'shoulder': 40,
+              'elbow': 40,
+              'wrist': 40,
+              'waist': 60,
+        }
+
+        damping = {
+              'hip_yaw': 2,
+              'hip_roll': 2,
+              'hip_pitch': 2,
+              'knee': 4,
+              'ankle': 2,
+              'shoulder': 1,
+              'elbow': 1,
+              'wrist': 1,
+              'waist': 2,
+        }
+        # action scale: target angle = actionScale * action + defaultAngle
+
+        # action scale: target angle = actionScale * action + defaultAngle
+        action_scale = 0.25
+        # decimation: Number of control action updates @ sim DT per policy DT
+        decimation = 20  # 50hz
+
+    class sim(LeggedRobotCfg.sim):
+        dt = 0.001  # 1000 Hz
+        substeps = 1
+        up_axis = 1  # 0 is y, 1 is z
+
+        class physx(LeggedRobotCfg.sim.physx):
+            num_threads = 10
+            solver_type = 1  # 0: pgs, 1: tgs
+            num_position_iterations = 4
+            num_velocity_iterations = 4
+            contact_offset = 0.01  # [m]
+            rest_offset = 0.0   # [m]
+            bounce_threshold_velocity = 0.5  # [m/s]
+            max_depenetration_velocity = 1.0
+            max_gpu_contact_pairs = 2**24  # 2**24 -> needed for 8000 envs and more
+            default_buffer_size_multiplier = 5
+            # 0: never, 1: last sub-step, 2: all sub-steps (default=2)
+            contact_collection = 2
+
+    class domain_rand:
+        randomize_friction = True
+        friction_range = [0.1, 1.3]
+        restitution_range = [0.0, 0.4]
+        randomize_base_mass = True
+        added_base_mass_range = [-3.0, 4.0]
+
+        randomize_base_com = True
+        added_base_com_range = [-0.12, 0.12]
+
+        randomize_pd_gains = True
+        stiffness_multiplier_range = [0.7, 1.2]  
+        damping_multiplier_range = [0.7, 1.2]   
+
+        randomize_link_mass = True
+        multiplied_link_mass_range = [0.8, 1.2]
+
+        randomize_motor_zero_offset = True
+        motor_zero_offset_range = [-0.035, 0.035] # Offset to add to the motor angles
+
+        randomize_calculated_torque = True
+        torque_multiplier_range = [0.8, 1.4]
+
+        randomize_joint_friction = True
+        joint_friction_range = [0.05, 1.5]
+
+        randomize_joint_damping = True
+        joint_damping_range = [0.3, 1.5]
+
+        randomize_joint_armature = True
+        joint_armature_range = [0.008, 0.06]    #
+
+        push_robots = True
+        push_interval_s = 4
+        max_push_vel_xy = 1.0
+        max_push_ang_vel = 1.0
+        # dynamic randomization
+        action_delay = 0.0
+        action_noise = 0.08
+        motor_strength = [0.8, 1.1]
+
+        add_cmd_action_latency = False
+        randomize_cmd_action_latency = False
+        range_cmd_action_latency = [1, 10]
+        
+        add_obs_latency = False # no latency for obs_action
+        randomize_obs_motor_latency = False
+        randomize_obs_imu_latency = False
+        range_obs_motor_latency = [1, 10]
+        range_obs_imu_latency = [1, 10]
+
+    class commands(LeggedRobotCfg.commands):
+        # Vers: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
+        num_commands = 4
+        resampling_time = 8.  # time before command are changed[s]
+        heading_command = True  # if true: compute ang vel command from heading error
+
+        class ranges:
+            lin_vel_x = [-1.0, 1.2]   # min max [m/s]
+            lin_vel_y = [-0.4, 0.4]   # min max [m/s]
+            ang_vel_yaw = [-1.5, 1.5] # min max [rad/s]
+            heading = [-3.14, 3.14]
+
+    class rewards:
+        base_height_target = 0.75
+        min_dist = 0.1
+        max_dist = 0.5
+        # put some settings here for LLM parameter tuning
+        target_joint_pos_scale = 0.17    # rad
+        target_feet_height = 0.08        # m
+        cycle_time = 1.0             # sec
+        # if true negative total rewards are clipped at zero (avoids early termination problems)
+        only_positive_rewards = False
+        # tracking reward = exp(error*sigma)
+        tracking_sigma = 0.25
+        max_contact_force = 600  # Forces above this value are penalized
+
+        class scales:
+            termination = -50.
+            # default_joint_pos = 2.8
+            feet_contact_number = 0.0
+            foot_slip = -0.1
+            feet_clearance = 0.02
+            # tracking_lin_vel = 3.0
+            # tracking_ang_vel = 2.5
+            ang_vel_xy = -0.5
+            torques = -5.e-8
+            dof_acc = -5.e-8
+            lin_vel_z = -1.8
+            feet_air_time = 0.
+            orientation = -10.0
+            dof_pos_limits = -10.0
+            # base_height = -20.0
+            no_fly = 0.0
+            dof_vel =-5.e-6 #-5.e-7
+            # torque_limits = -0.01
+
+            action_rate = -0.08
+            dof_position = 3.0*10
+            keypoint_position = 2.0*10
+            torso_position = 70.0
+            lin_velocity = 6.0
+            vel_direction = 6.0
+            roll_pitch = 1.0
+            yaw = 1.0
+
+            # termination = -10.
+            # feet_contact_forces = -0.10 * 1.25
+            # # stumble = -1000.0 * 1.25
+            # # default_joint_pos = 2.8
+            # feet_contact_number = 0.0
+            # foot_slip = -0.1
+            # # slippage = -30.0 * 1.25
+            # feet_clearance = 0.02
+            # # tracking_lin_vel = 3.0
+            # # tracking_ang_vel = 2.5
+            # ang_vel_xy = -0.5
+            # torques = -5.e-8
+            # dof_acc = -5.e-8
+            # dof_vel = -5.e-7
+            # lin_vel_z = -1.8
+            # feet_air_time = 0.
+            # orientation = -3.0
+            # dof_pos_limits = -10.0
+            # # base_height = -20.0
+            # no_fly = 0.0
+            # torque_limits = -0.02
+            #
+            # action_rate = -0.08
+            # # lower_action_rate = -0.9 * 1.25  # -0.6  # -0.3 # -0.3 -0.12 -0.01
+            # # upper_action_rate = -0.05 * 1.25  # -0.6  # -0.3 # -0.3 -0.12 -0.01
+            # dof_position = 3.0
+            # dof_vel_tracking = 3.0
+            # keypoint_position = 3.0
+            # lin_velocity = 6.0
+            # ang_velocity = 6.0
+            # vel_direction = 6.0
+            # roll_pitch = 1.0
+            # yaw = 1.0
+
+
+
+
+    class normalization:
+        class obs_scales:
+            lin_vel = 2.
+            ang_vel = 1.
+            dof_pos = 1.
+            dof_vel = 0.05
+            quat = 1.
+            height_measurements = 5.0
+        clip_observations = 100
+        clip_actions = 100
+
+
+class G1DacneCfgPPO(LeggedRobotCfgPPO):
+    seed = 5
+    runner_class_name = 'OnPolicyRunner'   # DWLOnPolicyRunner
+
+    class policy:
+        init_noise_std = 1.0
+        actor_hidden_dims = [768, 768, 768]
+        critic_hidden_dims = [768, 768, 768]
+
+    class algorithm(LeggedRobotCfgPPO.algorithm):
+        entropy_coef = 0.01
+        learning_rate = 1e-3
+        num_learning_epochs = 5
+        gamma = 0.99
+        lam = 0.95
+        num_mini_batches = 4
+        schedule = 'adaptive'
+        desired_kl = 0.01
+        max_grad_norm = 1.
+
+    class runner:
+        policy_class_name = 'ActorCritic'
+        algorithm_class_name = 'PPO'
+        num_steps_per_env = 60  # per iteration
+        max_iterations = 30001  # number of policy updates
+
+        # logging
+        save_interval = 100  # Please check for potential savings every `save_interval` iterations.
+        experiment_name = 'g1_dance'
+        run_name = ''
+        # Load and resume
+        resume = False
+        load_run = -1  # -1 = last run
+        checkpoint = -1  # -1 = last saved model
+        resume_path = None  # updated from load_run and chkpt

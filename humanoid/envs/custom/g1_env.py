@@ -9,6 +9,7 @@ from humanoid.envs import LeggedRobot
 from humanoid.utils.terrain import  HumanoidTerrain
 
 
+
 class G1FreeEnv(LeggedRobot):
     '''
     G1FreeEnv is a class that represents a custom environment for a legged robot.
@@ -158,14 +159,14 @@ class G1FreeEnv(LeggedRobot):
     def step(self, actions):
         if self.cfg.env.use_ref_actions:
             actions += self.ref_action
-        
+
         actions = torch.clip(actions, -self.cfg.normalization.clip_actions, self.cfg.normalization.clip_actions)
         # print(actions)
         # dynamic randomization
         # print(self.dof_pos)
         delay = torch.rand((self.num_envs, 1), device=self.device) * self.cfg.domain_rand.action_delay
         actions = (1 - delay) * actions + delay * self.actions
-        actions += self.cfg.domain_rand.action_noise * torch.randn_like(actions) * actions 
+        actions += self.cfg.domain_rand.action_noise * torch.randn_like(actions) * actions
         return super().step(actions)
 
 
