@@ -295,6 +295,7 @@ class G1DacneFreeEnv(LeggedRobot):
         self.target_root_euler = get_euler_xyz_tensor(target_root_quat)
         phase = self._get_phase()
         self.torso_state = self.rigid_state[:, self.torso_idx]
+        self.torso_projected_gravity = quat_rotate_inverse(self.torso_state[:, 3:7], self.gravity_vec)
         torso_quat = self.torso_state[:, 3:7]
         torso_euler = get_euler_xyz_tensor(torso_quat)
 
@@ -661,10 +662,13 @@ class G1DacneFreeEnv(LeggedRobot):
     def _reward_torso_position(self):
         error = torch.norm(self.target_body_pos[:, self.torso_idx, :] - self.torso_state[:, :3],
                                     dim=1)  # (N, 3)
-
         error = torch.mean(error)
         reward = torch.exp(-0.7 * error)
         return reward
+
+    def _reward_torso_orientation(self):
+        # Penalize non flat base orientation
+        return torch.sum(torch.square(self.torso_projected_gravity[:, :2]), dim=1)
 
     def _reward_dof_vel_tracking(self):
         diff_dof_vel = self.target_dof_vel - self.dof_vel

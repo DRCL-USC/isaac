@@ -20,7 +20,7 @@ class G1DacneCfg(LeggedRobotCfg):
         num_actions = 29
         num_envs = 8196
         # episode_length_s = 24     # episode length in seconds
-        episode_length_s = 131  # episode length in seconds
+        episode_length_s = 60  # episode length in seconds
         use_ref_actions = False   # speed up training by using reference actions
         motion_file = 'humanoid/envs/custom/motions/skeleton_data.npz'
 
@@ -277,6 +277,7 @@ class G1DacneCfg(LeggedRobotCfg):
             lin_vel_z = -1.8
             feet_air_time = 0.
             orientation = -10.0
+            torso_orientation = -10.0
             dof_pos_limits = -10.0
             # base_height = -20.0
             no_fly = 0.0
@@ -284,7 +285,7 @@ class G1DacneCfg(LeggedRobotCfg):
             # torque_limits = -0.01
 
             action_rate = -0.08
-            dof_position = 3.0*10
+            dof_position = 70.0*10
             keypoint_position = 2.0*10
             torso_position = 70.0
             lin_velocity = 6.0
