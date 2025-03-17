@@ -1,7 +1,7 @@
 from humanoid.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
 
-class G1Cfg(LeggedRobotCfg):
+class G1_23dof_Cfg(LeggedRobotCfg):
     """
     Configuration class for the XBotL humanoid robot.
     """
@@ -9,12 +9,12 @@ class G1Cfg(LeggedRobotCfg):
         # change the observation dim
         frame_stack = 15
         c_frame_stack = 1
-        num_single_obs = 45
+        num_single_obs = 78
         num_observations = int(frame_stack * num_single_obs)
-        single_num_privileged_obs = 86 
+        single_num_privileged_obs = 130 
         # + 187
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
-        num_actions = 12
+        num_actions = 23
         num_envs = 4096
         episode_length_s = 24     # episode length in seconds
         use_ref_actions = False   # speed up training by using reference actions
@@ -30,9 +30,9 @@ class G1Cfg(LeggedRobotCfg):
         name = "g1"
         foot_name = "ankle_roll"
         knee_name = "knee"
-        penalize_contacts_on = ["hip", "knee"]
-        terminate_after_contacts_on = ["pelvis"]
-        self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
+        penalize_contacts_on = ["hip", "knee", "wrist"]
+        terminate_after_contacts_on = ["torso", "head"]
+        self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
         replace_cylinder_with_capsule = False
         fix_base_link = False
@@ -81,7 +81,17 @@ class G1Cfg(LeggedRobotCfg):
            'right_knee_joint' : 0.2,                                             
            'right_ankle_pitch_joint': -0.1,                              
            'right_ankle_roll_joint' : 0,       
-           'torso_joint' : 0.
+           'waist_yaw_joint' : 0,
+           'left_shoulder_pitch_joint' : 0,
+           'left_shoulder_roll_joint' : 0.15,
+           'left_shoulder_yaw_joint' : 0,
+           'left_elbow_joint' : 1.2,
+           'left_wrist_roll_joint' : 0,
+           'right_shoulder_pitch_joint' : 0,
+           'right_shoulder_roll_joint' : -0.15,
+           'right_shoulder_yaw_joint' : 0,
+           'right_elbow_joint' : 1.2,
+           'right_wrist_roll_joint' : 0
         }
 
     class control(LeggedRobotCfg.control):
@@ -91,12 +101,20 @@ class G1Cfg(LeggedRobotCfg):
                      'hip_pitch': 100,
                      'knee': 150,
                      'ankle': 40,
+                     'shoulder': 40,
+                     'elbow': 40,
+                     'wrist': 40,
+                     'waist': 50
                      }  # [N*m/rad]
         damping = {  'hip_yaw': 2,
                      'hip_roll': 2,
                      'hip_pitch': 2,
                      'knee': 4,
                      'ankle': 2,
+                     'shoulder': 2,
+                     'elbow': 2,
+                     'wrist': 2,
+                     'waist': 2
                      }  # [N*m/rad]  # [N*m*s/rad]
         # action scale: target angle = actionScale * action + defaultAngle
 
@@ -188,7 +206,7 @@ class G1Cfg(LeggedRobotCfg):
             heading = [-3.14, 3.14]
 
     class rewards:
-        base_height_target = 0.75
+        base_height_target = 0.78
         min_dist = 0.1
         max_dist = 0.5
         # put some settings here for LLM parameter tuning
@@ -210,18 +228,18 @@ class G1Cfg(LeggedRobotCfg):
             tracking_lin_vel = 3.0
             tracking_ang_vel = 2.5
             ang_vel_xy = -0.5
-            torques = -5.e-8
-            dof_acc = -5.e-8
+            torques = -5.e-10
+            dof_acc = -5.e-9
             lin_vel_z = -1.8
-            feet_air_time = 100.
+            feet_air_time = 140.
             orientation = -3.0
             dof_pos_limits = -10.0
             base_height = -20.0
             no_fly = 0.8
-            dof_vel = -5.e-7
+            dof_vel = -5.e-8
             # torque_limits = -0.01
 
-            action_rate = -0.08
+            action_rate = -0.02
 
     class normalization:
         class obs_scales:
@@ -235,7 +253,7 @@ class G1Cfg(LeggedRobotCfg):
         clip_actions = 100
 
 
-class G1CfgPPO(LeggedRobotCfgPPO):
+class G1_23dof_CfgPPO(LeggedRobotCfgPPO):
     seed = 5
     runner_class_name = 'OnPolicyRunner'   # DWLOnPolicyRunner
 
@@ -263,7 +281,7 @@ class G1CfgPPO(LeggedRobotCfgPPO):
 
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.
-        experiment_name = 'g1'
+        experiment_name = 'g1_23dof'
         run_name = ''
         # Load and resume
         resume = False

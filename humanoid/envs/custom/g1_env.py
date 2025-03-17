@@ -339,7 +339,7 @@ class G1FreeEnv(LeggedRobot):
         right_yaw_roll = joint_diff[:,7:9]
         yaw_roll = torch.norm(left_yaw_roll, dim=1) + torch.norm(right_yaw_roll, dim=1) 
         yaw_roll = torch.clamp(yaw_roll - 0.1, 0, 50)
-        return torch.exp(-yaw_roll * 2.0) - 0.01 * torch.norm(joint_diff, dim=1)
+        return torch.exp(-yaw_roll * 1.0) - 0.01 * torch.norm(joint_diff, dim=1)
     
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity

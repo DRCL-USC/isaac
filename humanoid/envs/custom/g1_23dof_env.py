@@ -9,7 +9,7 @@ from humanoid.envs import LeggedRobot
 from humanoid.utils.terrain import  HumanoidTerrain
 
 
-class G1FreeEnv(LeggedRobot):
+class G1_23dof_FreeEnv(LeggedRobot):
     '''
     G1FreeEnv is a class that represents a custom environment for a legged robot.
 
@@ -84,7 +84,10 @@ class G1FreeEnv(LeggedRobot):
         stance_mask[:, 1] = sin_pos < 0
         # Double support phase
         stance_mask[torch.abs(sin_pos) < 0.1] = 1
+    
 
+        # self.default_dof_pos[:,13] = -sin_pos * 0.5
+        # self.default_dof_pos[:,18] = sin_pos * 0.5
         return stance_mask
 
     def compute_ref_state(self):
@@ -147,18 +150,18 @@ class G1FreeEnv(LeggedRobot):
         self.add_noise = self.cfg.noise.add_noise
         noise_scales = self.cfg.noise.noise_scales
         noise_vec[0: 3] = 0.  # commands
-        noise_vec[3: 15] = noise_scales.dof_pos * self.obs_scales.dof_pos
-        noise_vec[15: 27] = noise_scales.dof_vel * self.obs_scales.dof_vel
-        noise_vec[27: 39] = 0.  # previous actions
-        noise_vec[39: 42] = noise_scales.ang_vel * self.obs_scales.ang_vel   # ang vel
-        noise_vec[42: 45] = noise_scales.quat * self.obs_scales.quat         # euler x,y
+        noise_vec[3: 26] = noise_scales.dof_pos * self.obs_scales.dof_pos
+        noise_vec[26: 49] = noise_scales.dof_vel * self.obs_scales.dof_vel
+        noise_vec[49: 72] = 0.  # previous actions
+        noise_vec[72: 75] = noise_scales.ang_vel * self.obs_scales.ang_vel   # ang vel
+        noise_vec[75: 78] = noise_scales.quat * self.obs_scales.quat         # euler x,y
         return noise_vec
 
 
     def step(self, actions):
         if self.cfg.env.use_ref_actions:
             actions += self.ref_action
-        
+
         actions = torch.clip(actions, -self.cfg.normalization.clip_actions, self.cfg.normalization.clip_actions)
         # print(actions)
         # dynamic randomization
@@ -176,7 +179,15 @@ class G1FreeEnv(LeggedRobot):
 
         sin_pos = torch.sin(2 * torch.pi * phase).unsqueeze(1)
         cos_pos = torch.cos(2 * torch.pi * phase).unsqueeze(1)
+        # print(self.default_joint_pd_target.size())
+        # print(sin_pos.size())
+        # print((sin_pos*0.5).size())
+        self.default_joint_pd_target[:,13] = (sin_pos * 0.4)[0]
+        self.default_joint_pd_target[:,18] = (-sin_pos * 0.4)[0]  
+        # self.default_dof_pos[:,13] = (sin_pos * 0.6)[0]
+        # self.default_dof_pos[:,18] = (-sin_pos * 0.6)[0]  
 
+        # print(self.default_joint_pd_target)
         stance_mask = self._get_gait_phase()
         contact_mask = self.contact_forces[:, self.feet_indices, 2] > 1.
 
@@ -201,10 +212,10 @@ class G1FreeEnv(LeggedRobot):
         self.privileged_obs_buf = torch.cat((
             self.command_input,
             (self.dof_pos - self.default_joint_pd_target) * \
-            self.obs_scales.dof_pos,  # 12
-            self.dof_pos, # 12
-            dq,  # 12
-            self.actions,  # 12
+            self.obs_scales.dof_pos,  # 23
+            self.dof_pos, # 23
+            dq,  # 23
+            self.actions,  # 23
             # diff,  # 10
             self.base_lin_vel * self.obs_scales.lin_vel,  # 3
             self.base_ang_vel * self.obs_scales.ang_vel,  # 3
@@ -223,9 +234,9 @@ class G1FreeEnv(LeggedRobot):
 
         obs_buf = torch.cat((
             self.command_input, #3
-            q,    # 12D
-            dq,  # 12D
-            self.actions,   # 12D
+            q,    # 23D
+            dq,  # 23D
+            self.actions,   # 23D
             self.base_ang_vel * self.obs_scales.ang_vel,  # 3
             self.base_euler_xyz * self.obs_scales.quat,  # 3
         ), dim=-1)
@@ -334,11 +345,12 @@ class G1FreeEnv(LeggedRobot):
         joint_diff[:, 6] = 0
         joint_diff[:, 4] = 0
         joint_diff[:, 10] = 0
-        left_yaw_roll = joint_diff[:, 1:3]
+
+        left_yaw_roll = joint_diff[:, 1:3] 
         right_yaw_roll = joint_diff[:,7:9]
-        yaw_roll = torch.norm(left_yaw_roll, dim=1) + torch.norm(right_yaw_roll, dim=1) 
-        yaw_roll = torch.clamp(yaw_roll - 0.1, 0, 50)
-        return torch.exp(-yaw_roll * 2.0) - 0.01 * torch.norm(joint_diff, dim=1)
+        yaw_roll = torch.norm(left_yaw_roll, dim=1) + torch.norm(right_yaw_roll, dim=1) + torch.norm(joint_diff[:, 12:], dim=1)
+        yaw_roll = torch.clamp(yaw_roll - 0.2, 0, 50)
+        return torch.exp(-yaw_roll * 3.0) - 0.01 * torch.norm(joint_diff, dim=1) # - 0.05 * torch.norm(joint_diff[:, 12:], dim=1)
     
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity
@@ -371,7 +383,7 @@ class G1FreeEnv(LeggedRobot):
     
     def _reward_action_rate(self):
         # Penalize changes in actions
-        return torch.sum(torch.square(self.last_actions - self.actions), dim=1)
+        return torch.sum(torch.square(self.last_actions - self.actions), dim=1) 
     
     def _reward_collision(self):
         # Penalize collisions on selected bodies
