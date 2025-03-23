@@ -1,4 +1,6 @@
-from requests.packages import target
+# from requests.packages import target
+# import requests
+from requests.packages import urllib3
 
 from humanoid.envs.base.legged_robot_config import LeggedRobotCfg
 
@@ -70,6 +72,9 @@ class G1DacneFreeEnv(LeggedRobot):
         self.target_keypoint_ang_vel = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
         self.keypoint_pos = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
         self.keypoint_rot = torch.zeros((self.num_envs, self.num_bodies, 4), device=self.device)
+        self.torso_state = self.rigid_state[:, self.torso_idx]
+        self.torso_quat = self.torso_state[:, 3:7]
+        self.torso_euler = get_euler_xyz_tensor(self.torso_quat)
         self.keypoint_lin_vel = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
         self.keypoint_ang_vel = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
         self.initial_target_keypoint_pos = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device)
@@ -225,7 +230,7 @@ class G1DacneFreeEnv(LeggedRobot):
         # demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = \
         #     self._motion_loader.sample(num_samples=self.num_envs, times=demo_time_np)
         keypoint_names = ['left_shoulder_pitch_link', 'right_shoulder_pitch_link',
-                          'left_elbow_link', 'right_elbow_link',
+                          'left_elbow_link', 'right_elbow_link', 'pelvis', 'torsp',
                           'left_wrist_pitch_link', 'right_wrist_pitch_link',
                           'left_ankle_pitch_link', 'right_ankle_pitch_link']
         keypoint_indices = [i for i, name in enumerate(self.body_names) if name in keypoint_names]
@@ -285,18 +290,18 @@ class G1DacneFreeEnv(LeggedRobot):
         demo_dof_pos, demo_dof_vel, demo_body_pos, demo_body_rot, demo_body_lin_vel, demo_body_ang_vel = self.sample_motion_data()
         # self.demo_body_pos = demo_body_pos
         self.target_dof_pos = demo_dof_pos[:, -29:]
-        self.target_dof_vel = demo_dof_vel[:, -29:]
+        # self.target_dof_vel = demo_dof_vel[:, -29:]
         # self.default_dof_pos = self.target_dof_pos #make action base on target_dof_pos
         self.target_body_pos = demo_body_pos
         self.target_body_rot = demo_body_rot
         self.target_body_lin_vel = demo_body_lin_vel
         self.target_body_ang_vel = demo_body_ang_vel
-        target_root_quat = self.target_body_rot[:, 0, :]
+        target_root_quat = self.target_body_rot[:, self.torso_idx, :]
         self.target_root_euler = get_euler_xyz_tensor(target_root_quat)
         phase = self._get_phase()
         self.torso_state = self.rigid_state[:, self.torso_idx]
-        torso_quat = self.torso_state[:, 3:7]
-        torso_euler = get_euler_xyz_tensor(torso_quat)
+        self.torso_quat = self.torso_state[:, 3:7]
+        self.torso_euler = get_euler_xyz_tensor(self.torso_quat)
 
         self.compute_ref_state()
 
@@ -338,6 +343,7 @@ class G1DacneFreeEnv(LeggedRobot):
             torch.flatten(self.rigid_state[:, self.feet_indices, :3], start_dim=1, end_dim=2),
             torch.flatten(self.rigid_state[:, self.feet_indices, 7:10], start_dim=1, end_dim=2),
             self.root_states[:, :3], # 3
+            self.torso_state[:, :7],
             self.rand_push_force[:, :2],  # 2
             self.rand_push_torque,  # 3
             self.env_frictions,  # 1
@@ -347,10 +353,11 @@ class G1DacneFreeEnv(LeggedRobot):
             contact_mask,  # 2
             self.target_dof_pos, #29
             self.target_keypoint_pos.view(-1, 24), #24
-            (self.keypoint_pos-self.target_keypoint_pos).view(-1, 24), #24
-            self.target_dof_vel,  # 29
+            # self.keypoint_pos.view(-1, 24), #24
+            # self.target_dof_vel,  # 29
         ), dim=-1)
 
+        # print( self.privileged_obs_buf.size())
         obs_buf = torch.cat((
             # self.command_input, #3
             q,    # 12D
@@ -442,7 +449,7 @@ class G1DacneFreeEnv(LeggedRobot):
         """
         self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1., dim=1)
         torso_offset = torch.norm(self.target_body_pos[:, self.torso_idx, :] - self.torso_state[:, :3], dim=1)
-        self.reset_buf |= torso_offset > 1.5
+        # self.reset_buf |= torso_offset > 2.0
         self.time_out_buf = self.episode_length_buf > self.max_episode_length # no terminal reward for time-outs
         self.reset_buf |= self.time_out_buf
 
@@ -655,14 +662,15 @@ class G1DacneFreeEnv(LeggedRobot):
         r_dof = 3.0 * exp( -0.7 * sum(|q_ref - q|) )
         dof_pos, target_dof_pos: shape (N, D)
         """
-        error = torch.sum(torch.abs(self.target_dof_pos - self.dof_pos), dim=1)  # (N,)
+        error = torch.norm(self.target_dof_pos - self.dof_pos, dim=1)  # (N,)
+        erro = torch.clamp(error - 0.2, 0, 50)
         return torch.exp(-0.7 * error)
 
     def _reward_torso_position(self):
-        error = torch.norm(self.target_body_pos[:, self.torso_idx, :] - self.torso_state[:, :3],
+        error = torch.norm(self.target_body_pos[:, self.torso_idx, :] - self.root_state[:, :3],
                                     dim=1)  # (N, 3)
 
-        error = torch.mean(error)
+        # error = torch.mean(error)
         reward = torch.exp(-0.7 * error)
         return reward
 
@@ -690,8 +698,8 @@ class G1DacneFreeEnv(LeggedRobot):
         # self.keypoint_pos - self.target_keypoint_pos
         # error = torch.norm(self.keypoint_pos - self.target_keypoint_pos, dim=2)  # (N, num_bodies, 3)
         error = torch.norm(self.target_body_pos[:, :, :] - self.rigid_state[:, :, :3], dim=2)  # (N, num_bodies, 3)
-        lower_error_mean = torch.mean(error[:, :17], dim=1)
-        upper_error_mean = torch.mean(error[:, 17:], dim=1)
+        lower_error_mean = torch.norm(error[:, :17], dim=1)
+        upper_error_mean = torch.norm(error[:, 17:], dim=1)
         reward_lower = torch.exp(-0.5 * lower_error_mean)
         reward_upper = torch.exp(-1.2 * upper_error_mean)
         reward = reward_lower + reward_upper

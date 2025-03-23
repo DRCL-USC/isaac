@@ -13,7 +13,7 @@ class G1DacneCfg(LeggedRobotCfg):
         num_single_obs = 96 + 29 - 3
         num_observations = int(frame_stack * num_single_obs)
         # single_num_privileged_obs = 86
-        single_num_privileged_obs = 154 + 29 - 3 + 77
+        single_num_privileged_obs = 211
         # + 187
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
         # num_actions = 12
@@ -22,7 +22,7 @@ class G1DacneCfg(LeggedRobotCfg):
         # episode_length_s = 24     # episode length in seconds
         episode_length_s = 131  # episode length in seconds
         use_ref_actions = False   # speed up training by using reference actions
-        motion_file = 'humanoid/envs/custom/motions/skeleton_data.npz'
+        motion_file = 'envs/custom/motions/skeleton_data.npz'
 
     class safety:
         # safety factors
@@ -37,7 +37,7 @@ class G1DacneCfg(LeggedRobotCfg):
         foot_name = "ankle_roll"
         knee_name = "knee"
         penalize_contacts_on = ["hip", "knee"]
-        terminate_after_contacts_on = ["pelvis", "torso", "elbow"]
+        terminate_after_contacts_on = ["pelvis", "torso", "elbow", "shoulder", "wrist", "hip"]
         self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
         replace_cylinder_with_capsule = False
@@ -218,7 +218,7 @@ class G1DacneCfg(LeggedRobotCfg):
         randomize_joint_armature = True
         joint_armature_range = [0.008, 0.06]    #
 
-        push_robots = True
+        push_robots = False
         push_interval_s = 4
         max_push_vel_xy = 1.0
         max_push_ang_vel = 1.0
@@ -264,7 +264,7 @@ class G1DacneCfg(LeggedRobotCfg):
         max_contact_force = 600  # Forces above this value are penalized
 
         class scales:
-            termination = -50.
+            termination = -0.
             # default_joint_pos = 2.8
             feet_contact_number = 0.0
             foot_slip = -0.1
@@ -274,57 +274,24 @@ class G1DacneCfg(LeggedRobotCfg):
             ang_vel_xy = -0.5
             torques = -5.e-8
             dof_acc = -5.e-8
-            lin_vel_z = -1.8
+            lin_vel_z = -0.2
             feet_air_time = 0.
-            orientation = -10.0
+            orientation = -0.
             dof_pos_limits = -10.0
             # base_height = -20.0
             no_fly = 0.0
-            dof_vel =-5.e-6 #-5.e-7
+            dof_vel = -5.e-7 #-5.e-7
             # torque_limits = -0.01
 
-            action_rate = -0.08
-            dof_position = 3.0*10
-            keypoint_position = 2.0*10
-            torso_position = 70.0
-            lin_velocity = 6.0
-            vel_direction = 6.0
-            roll_pitch = 1.0
-            yaw = 1.0
+            action_rate = -0.1
+            dof_position = 0.8
+            keypoint_position = 2
+            torso_position = 0.
+            lin_velocity = 0.
+            vel_direction = 0.
+            roll_pitch = 0.4
+            yaw =  0.4
 
-            # termination = -10.
-            # feet_contact_forces = -0.10 * 1.25
-            # # stumble = -1000.0 * 1.25
-            # # default_joint_pos = 2.8
-            # feet_contact_number = 0.0
-            # foot_slip = -0.1
-            # # slippage = -30.0 * 1.25
-            # feet_clearance = 0.02
-            # # tracking_lin_vel = 3.0
-            # # tracking_ang_vel = 2.5
-            # ang_vel_xy = -0.5
-            # torques = -5.e-8
-            # dof_acc = -5.e-8
-            # dof_vel = -5.e-7
-            # lin_vel_z = -1.8
-            # feet_air_time = 0.
-            # orientation = -3.0
-            # dof_pos_limits = -10.0
-            # # base_height = -20.0
-            # no_fly = 0.0
-            # torque_limits = -0.02
-            #
-            # action_rate = -0.08
-            # # lower_action_rate = -0.9 * 1.25  # -0.6  # -0.3 # -0.3 -0.12 -0.01
-            # # upper_action_rate = -0.05 * 1.25  # -0.6  # -0.3 # -0.3 -0.12 -0.01
-            # dof_position = 3.0
-            # dof_vel_tracking = 3.0
-            # keypoint_position = 3.0
-            # lin_velocity = 6.0
-            # ang_velocity = 6.0
-            # vel_direction = 6.0
-            # roll_pitch = 1.0
-            # yaw = 1.0
 
 
 
@@ -365,7 +332,7 @@ class G1DacneCfgPPO(LeggedRobotCfgPPO):
         policy_class_name = 'ActorCritic'
         algorithm_class_name = 'PPO'
         num_steps_per_env = 60  # per iteration
-        max_iterations = 30001  # number of policy updates
+        max_iterations = 300001  # number of policy updates
 
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.
