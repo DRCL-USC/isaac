@@ -20,7 +20,7 @@ class G1DacneCfg(LeggedRobotCfg):
         num_actions = 29
         num_envs = 8196
         # episode_length_s = 24     # episode length in seconds
-        episode_length_s = 131  # episode length in seconds
+        episode_length_s = 60  # episode length in seconds
         use_ref_actions = False   # speed up training by using reference actions
         motion_file = 'envs/custom/motions/skeleton_data.npz'
 
@@ -290,7 +290,7 @@ class G1DacneCfg(LeggedRobotCfg):
             lin_velocity = 0.
             vel_direction = 0.
             roll_pitch = 0.4
-            yaw =  0.4
+            yaw =  0.8
 
 
 

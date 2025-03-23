@@ -674,6 +674,10 @@ class G1DacneFreeEnv(LeggedRobot):
         reward = torch.exp(-0.7 * error)
         return reward
 
+    def _reward_torso_orientation(self):
+        # Penalize non flat base orientation
+        return torch.sum(torch.square(self.torso_projected_gravity[:, :2]), dim=1)
+
     def _reward_dof_vel_tracking(self):
         diff_dof_vel = self.target_dof_vel - self.dof_vel
         # scale the diff by self.cfg.rewards.teleop_joint_pos_selection
