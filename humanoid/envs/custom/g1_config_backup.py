@@ -26,9 +26,8 @@ class M1Cfg(LeggedRobotCfg):
         torque_limit = 0.85
 
     class asset(LeggedRobotCfg.asset):
-        # file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1_description/g1_12dof.urdf'
-        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/Motion1/m1.urdf'
-        name = "m1"
+        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1_description/g1_12dof.urdf'
+        name = "g1"
         foot_name = "ankle_roll"
         knee_name = "knee"
         penalize_contacts_on = ["hip", "knee"]
@@ -280,7 +279,7 @@ class M1CfgPPO(LeggedRobotCfgPPO):
 
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.
-        experiment_name = 'm1'
+        experiment_name = 'l1'
         run_name = ''
         # Load and resume
         resume = False
