@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #
@@ -35,12 +35,13 @@ from tqdm import tqdm
 from collections import deque
 from scipy.spatial.transform import Rotation as R
 from humanoid import LEGGED_GYM_ROOT_DIR
-from humanoid.envs import XBotLCfg
+from humanoid.envs import XBotLCfg, Go2wCfg
+from humanoid.algo.ppo.on_policy_runner import OnPolicyRunner
 import torch
 
 
 class cmd:
-    vx = 0.4
+    vx = 1.5
     vy = 0.0
     dyaw = 0.0
 
@@ -48,36 +49,36 @@ class cmd:
 def quaternion_to_euler_array(quat):
     # Ensure quaternion is in the correct format [x, y, z, w]
     x, y, z, w = quat
-    
+
     # Roll (x-axis rotation)
     t0 = +2.0 * (w * x + y * z)
     t1 = +1.0 - 2.0 * (x * x + y * y)
     roll_x = np.arctan2(t0, t1)
-    
+
     # Pitch (y-axis rotation)
     t2 = +2.0 * (w * y - z * x)
     t2 = np.clip(t2, -1.0, 1.0)
     pitch_y = np.arcsin(t2)
-    
+
     # Yaw (z-axis rotation)
     t3 = +2.0 * (w * z + x * y)
     t4 = +1.0 - 2.0 * (y * y + z * z)
     yaw_z = np.arctan2(t3, t4)
-    
+
     # Returns roll, pitch, yaw in a NumPy array in radians
     return np.array([roll_x, pitch_y, yaw_z])
 
 def get_obs(data):
     '''Extracts an observation from the mujoco data structure
     '''
-    q = data.qpos.astype(np.double)
-    dq = data.qvel.astype(np.double)
-    quat = data.sensor('orientation').data[[1, 2, 3, 0]].astype(np.double)
+    dof_pos = data.qpos.astype(np.double)
+    dof_vel = data.qvel.astype(np.double)
+    quat = data.sensor('imu_quat').data[[1, 2, 3, 0]].astype(np.double)
     r = R.from_quat(quat)
     v = r.apply(data.qvel[:3], inverse=True).astype(np.double)  # In the base frame
-    omega = data.sensor('angular-velocity').data.astype(np.double)
+    omega = data.sensor('imu_gyro').data.astype(np.double)
     gvec = r.apply(np.array([0., 0., -1.]), inverse=True).astype(np.double)
-    return (q, dq, quat, v, omega, gvec)
+    return (dof_pos, dof_vel, quat, v, omega, gvec)
 
 def pd_control(target_q, q, kp, target_dq, dq, kd):
     '''Calculates torques from position commands
@@ -100,6 +101,7 @@ def run_mujoco(policy, cfg):
     data = mujoco.MjData(model)
     mujoco.mj_step(model, data)
     viewer = mujoco_viewer.MujocoViewer(model, data)
+    default_dof_pos = np.array([0, 1, -1.5, 0, 0, 1, -1.5, 0, 0, 1, -1.5, 0, 0, 1, -1.5, 0])
 
     target_q = np.zeros((cfg.env.num_actions), dtype=np.double)
     action = np.zeros((cfg.env.num_actions), dtype=np.double)
@@ -114,9 +116,9 @@ def run_mujoco(policy, cfg):
     for _ in tqdm(range(int(cfg.sim_config.sim_duration / cfg.sim_config.dt)), desc="Simulating..."):
 
         # Obtain an observation
-        q, dq, quat, v, omega, gvec = get_obs(data)
-        q = q[-cfg.env.num_actions:]
-        dq = dq[-cfg.env.num_actions:]
+        dof_pos, dof_vel, quat, v, omega, gvec = get_obs(data)
+        q = dof_pos[7:]
+        dq = dof_vel[6:]
 
         # 1000hz -> 100hz
         if count_lowlevel % cfg.sim_config.decimation == 0:
@@ -125,16 +127,14 @@ def run_mujoco(policy, cfg):
             eu_ang = quaternion_to_euler_array(quat)
             eu_ang[eu_ang > math.pi] -= 2 * math.pi
 
-            obs[0, 0] = math.sin(2 * math.pi * count_lowlevel * cfg.sim_config.dt  / 0.64)
-            obs[0, 1] = math.cos(2 * math.pi * count_lowlevel * cfg.sim_config.dt  / 0.64)
-            obs[0, 2] = cmd.vx * cfg.normalization.obs_scales.lin_vel
-            obs[0, 3] = cmd.vy * cfg.normalization.obs_scales.lin_vel
-            obs[0, 4] = cmd.dyaw * cfg.normalization.obs_scales.ang_vel
-            obs[0, 5:17] = q * cfg.normalization.obs_scales.dof_pos
-            obs[0, 17:29] = dq * cfg.normalization.obs_scales.dof_vel
-            obs[0, 29:41] = action
-            obs[0, 41:44] = omega
-            obs[0, 44:47] = eu_ang
+            obs[0, 0] = cmd.vx * cfg.normalization.obs_scales.lin_vel
+            obs[0, 1] = cmd.vy * cfg.normalization.obs_scales.lin_vel
+            obs[0, 2] = cmd.dyaw * cfg.normalization.obs_scales.ang_vel
+            obs[0, 3:19] = (q - default_dof_pos) * cfg.normalization.obs_scales.dof_pos
+            obs[0, 19:35] = dq * cfg.normalization.obs_scales.dof_vel
+            obs[0, 35:51] = action
+            obs[0, 51:54] = omega
+            obs[0, 54:57] = eu_ang
 
             obs = np.clip(obs, -cfg.normalization.clip_observations, cfg.normalization.clip_observations)
 
@@ -146,15 +146,24 @@ def run_mujoco(policy, cfg):
                 policy_input[0, i * cfg.env.num_single_obs : (i + 1) * cfg.env.num_single_obs] = hist_obs[i][0, :]
             action[:] = policy(torch.tensor(policy_input))[0].detach().numpy()
             action = np.clip(action, -cfg.normalization.clip_actions, cfg.normalization.clip_actions)
-
-            target_q = action * cfg.control.action_scale
-
+            # target_q = action * cfg.control.action_scale
+            if count_lowlevel > 400:
+                target_q = action * cfg.control.action_scale + default_dof_pos
+            else:
+                target_q = default_dof_pos
 
         target_dq = np.zeros((cfg.env.num_actions), dtype=np.double)
         # Generate PD control
         tau = pd_control(target_q, q, cfg.robot_config.kps,
                         target_dq, dq, cfg.robot_config.kds)  # Calc torques
+        tau[3] = cfg.robot_config.kds[3] * (action[3] - dq[3])
+        tau[7] = cfg.robot_config.kds[7] * (action[7] - dq[7])
+        tau[11] = cfg.robot_config.kds[11] * (action[11] - dq[11])
+        tau[15] = cfg.robot_config.kds[15] * (action[15] - dq[15])
+        # print(tau)
         tau = np.clip(tau, -cfg.robot_config.tau_limit, cfg.robot_config.tau_limit)  # Clamp torques
+        if count_lowlevel < 200:
+            tau = 0
         data.ctrl = tau
 
         mujoco.mj_step(model, data)
@@ -173,21 +182,25 @@ if __name__ == '__main__':
     parser.add_argument('--terrain', action='store_true', help='terrain or plane')
     args = parser.parse_args()
 
-    class Sim2simCfg(XBotLCfg):
+    class Sim2simCfg(Go2wCfg):
 
         class sim_config:
             if args.terrain:
-                mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/XBot/mjcf/XBot-L-terrain.xml'
+                mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/go2w/mjcf/scene_terrain.xml'
             else:
-                mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/XBot/mjcf/XBot-L.xml'
+                mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/go2w/mjcf/scene.xml'
             sim_duration = 60.0
             dt = 0.001
-            decimation = 10
+            decimation = 20
 
         class robot_config:
-            kps = np.array([200, 200, 350, 350, 15, 15, 200, 200, 350, 350, 15, 15], dtype=np.double)
-            kds = np.array([10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10], dtype=np.double)
-            tau_limit = 200. * np.ones(12, dtype=np.double)
+            # kps = np.array([100, 100, 100, 150, 40, 40, 100, 100, 100, 150, 40, 40, 10, 10, 10, 10], dtype=np.double)
+            kps = np.array([50, 50, 50, 0, 50, 50, 50, 0, 50, 50, 50, 0, 50, 50, 50, 0], dtype=np.double)
+            # kds = np.array([2, 2, 2, 4, 2, 2, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2], dtype=np.double)
+            kds = np.array([2, 2, 2, 0.5, 2, 2, 2, 0.5, 2, 2, 2, 0.5, 2, 2, 2, 0.5], dtype=np.double)
+            # tau_limit = 30 * np.ones(16, dtype=np.double)
+            tau_limit = np.array([20.1450, 20.1450, 30.2175, 20.1450, 20.1450, 20.1450, 30.2175, 20.1450,
+                                20.1450, 20.1450, 30.2175, 20.1450, 20.1450, 20.1450, 30.2175, 20.1450], dtype=np.double)
 
     policy = torch.jit.load(args.load_model)
     run_mujoco(policy, Sim2simCfg())

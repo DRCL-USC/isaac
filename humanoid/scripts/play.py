@@ -56,11 +56,11 @@ def play(args):
     env_cfg.env.num_envs = min(env_cfg.env.num_envs, 1)
     env_cfg.sim.max_gpu_contact_pairs = 2**24
     env_cfg.terrain.mesh_type = 'trimesh'
-    env_cfg.terrain.terrain_proportions = [0.1, 0.1, 0.4, 0.2, 0.2, 0., 0.]
+    env_cfg.terrain.terrain_proportions = [0.1, 0.2, 0.3, 0.2, 0.2, 0, 0]
     # env_cfg.terrain.mesh_type = 'plane'
     env_cfg.terrain.num_rows = 5
     env_cfg.terrain.num_cols = 5
-    env_cfg.terrain.curriculum = False
+    env_cfg.terrain.curriculum = True
     env_cfg.terrain.max_init_terrain_level = 5
     env_cfg.noise.add_noise = True
     env_cfg.domain_rand.push_robots = False
@@ -199,7 +199,7 @@ def play(args):
         video.release()
 
 if __name__ == '__main__':
-    EXPORT_POLICY = False
+    EXPORT_POLICY = True
     RENDER = True
     FIX_COMMAND = True
     args = get_args()

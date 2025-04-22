@@ -3,7 +3,7 @@ from humanoid.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCf
 
 class Go2wCfg(LeggedRobotCfg):
     """
-    Configuration class for the XBotL humanoid robot.
+    Configuration class for the Go2W robot.
     """
     class env(LeggedRobotCfg.env):
         # change the observation dim
@@ -55,7 +55,7 @@ class Go2wCfg(LeggedRobotCfg):
         num_cols = 20  # number of terrain cols (types)
         max_init_terrain_level = 10  # starting curriculum state
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
-        terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
+        terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0, 0]
         restitution = 0.
 
     class noise:
@@ -165,7 +165,7 @@ class Go2wCfg(LeggedRobotCfg):
         max_contact_force = 180  # Forces above this value are penalized
 
         class scales:
-            termination = 10.
+            termination = -200.
             default_joint_pos = 2.0
             foot_slip = -1.
             feet_clearance = 1.0
@@ -182,6 +182,7 @@ class Go2wCfg(LeggedRobotCfg):
             no_fly = 0.0
             dof_vel = -2.e-10
             feet_contact_forces = -0.01
+            stand_still = -10.0
 
             action_rate = -0.01
 
